@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  postgres-vector:
+    image: pgvector/pgvector:pg16
+    container_name: sextafeira-pgvector
+    environment:
+      POSTGRES_DB: sextafeira_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgvector_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sextafeira_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  ollama-local:
+    image: ollama/ollama:latest
+    container_name: sextafeira-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+
+  sextafeira-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: sextafeira-backend
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__PostgresVector=Host=postgres-vector;Port=5432;Database=sextafeira_db;Username=postgres;Password=postgres
+      - Ollama__BaseUrl=http://ollama-local:11434
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres-vector:
+        condition: service_healthy
+    restart: unless-stopped
+
+  sextafeira-frontend:
+    build:
+      context: ./src/SextaFeira.Web
+      dockerfile: Dockerfile
+    container_name: sextafeira-frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - sextafeira-backend
+    restart: unless-stopped
+
+volumes:
+  pgvector_data:
+  ollama_data:

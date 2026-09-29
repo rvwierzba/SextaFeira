@@ -1,0 +1,21 @@
+FROM mcr.microsoft.com/dotnet/sdk:10.0-preview AS build
+WORKDIR /app
+
+COPY SextaFeira.sln ./
+COPY src/SextaFeira.Domain/*.csproj ./src/SextaFeira.Domain/
+COPY src/SextaFeira.Application/*.csproj ./src/SextaFeira.Application/
+COPY src/SextaFeira.Infrastructure/*.csproj ./src/SextaFeira.Infrastructure/
+COPY src/SextaFeira.WebApi/*.csproj ./src/SextaFeira.WebApi/
+
+RUN dotnet restore SextaFeira.sln
+
+COPY . .
+WORKDIR /app/src/SextaFeira.WebApi
+RUN dotnet publish -c Release -o /out
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-preview AS runtime
+WORKDIR /app
+COPY --from=build /out ./
+EXPOSE 5000
+ENV ASPNETCORE_URLS=http://+:5000
+ENTRYPOINT ["dotnet", "SextaFeira.WebApi.dll"]
