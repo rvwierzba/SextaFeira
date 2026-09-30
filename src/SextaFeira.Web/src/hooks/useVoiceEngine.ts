@@ -79,15 +79,15 @@ export const useVoiceEngine = ({ onCommandDetected, onStateChange }: UseVoiceEng
       const current = event.resultIndex;
       const transcript = event.results[current][0].transcript.toLowerCase();
 
-      // Detecção de Wake-Word "Sexta-Feira"
-      if (transcript.includes('sexta-feira') || transcript.includes('sexta feira') || transcript.includes('friday')) {
-        let cleanCommand = transcript
-          .replace(/sexta-feira/g, '')
-          .replace(/sexta feira/g, '')
-          .replace(/friday/g, '')
-          .trim();
+      // Detecção Multilíngue de Wake-Word ("Ei, Sexta feira", "Hey Friday", "Ei Sexta", "Oye Sexta feira", "Bonjour Friday")
+      const wakeWordRegex = /(?:ei|hey|hi|ok|oye|bonjour|ehi)?\s*(?:sexta-feira|sexta\s*feira|friday|sexta)/gi;
 
-        if (cleanCommand.length > 3) {
+      if (wakeWordRegex.test(transcript)) {
+        let cleanCommand = transcript.replace(wakeWordRegex, '').trim();
+        // Remover vírgulas ou pontuações no início
+        cleanCommand = cleanCommand.replace(/^[,\s.-]+/, '');
+
+        if (cleanCommand.length > 2) {
           onCommandDetected(cleanCommand);
         }
       }

@@ -37,5 +37,8 @@ public enum ToolCategory
     Calendar = 4,
     Email = 5,
     Files = 6,
-    Geolocation = 7
+    Geolocation = 7,
+    Spotify = 8,
+    GoogleServices = 9,
+    CodeEvolution = 10
 }

@@ -48,8 +48,8 @@
 - **Desacoplado de LLMs específicas** — Suporte a múltiplos provedores (Ollama local, OpenAI, Anthropic, Google Gemini, Groq) com fallback inteligente automático
 - **Zero-Trust Execution** — Todo código gerado pela IA é executado em containers Docker isolados
 - **Memória de Longo Prazo** — PostgreSQL + pgvector para busca semântica vetorial com reciclagem automática de contexto
-- **Self-Healing** — Motor de auto-correção que testa, identifica erros e refatora código automaticamente
-- **Voz-First** — Interação natural em PT-BR com STT (Whisper) e TTS (Azure Neural)
+- **Self-Healing & Auto-Evolução** — Motor de auto-correção que refatora erros e altera o próprio código C#/.NET em tempo de execução com validação `dotnet build`
+- **Voz-First Multilíngue** — Interação reativa por voz com detecção de wake-words em múltiplos idiomas (`"Ei, Sexta feira"`, `"Hey Friday"`, `"Oye Sexta feira"`)
 
 ---
 
@@ -119,19 +119,20 @@ WebApi → Application → Domain ← Infrastructure
 
 ## ⚡ Funcionalidades Principais
 
-### 🧠 Core de IA
+### 🧠 Core de IA & Auto-Evolução
 - **Multi-Provider LLM** com fallback automático (Local → Cloud → Contingência)
 - **RAG (Retrieval-Augmented Generation)** com memória vetorial pgvector
-- **Tool Calling** nativo com dispatch via MCP para execução no mundo real
+- **Tool Calling** nativo com dispatch via MCP (13 ferramentas ativas)
 - **Self-Healing Engine** — Ciclo de debug-fix-retry automático em Docker Sandbox
+- **Self-Evolution Engine** — Protocolo de auto-desenvolvimento e alteração de código C#/.NET em tempo de execução com compilação `dotnet build`
 
-### 🎙️ Voz
-- **Wake Word Detection** via WebSocket
-- **Speech-to-Text (STT)** — Whisper em PT-BR
-- **Text-to-Speech (TTS)** — Azure Cognitive Voice (FranciscaNeural PT-BR)
+### 🎙️ Voz Multilíngue
+- **Wake Word Detection Multilíngue** (`"Ei, Sexta feira"`, `"Hey Friday"`, `"Oye Sexta feira"`)
+- **Speech-to-Text (STT)** — Whisper / Web Speech API (PT-BR, EN, ES, FR)
+- **Text-to-Speech (TTS)** — Azure Cognitive / SpeechSynthesis
 - **Streaming de áudio** bidirecional via SignalR
 
-### 🌐 Agentes & Ferramentas MCP
+### 🌐 Agentes & Ferramentas MCP (13 Ativas)
 | Ferramenta | Descrição |
 |-----------|-----------|
 | `network_scan` | Scanner de rede local (Wi-Fi/Ethernet) |
@@ -140,20 +141,26 @@ WebApi → Application → Domain ← Infrastructure
 | `docker_execute_code` | Execução isolada de código em Docker |
 | `calendar_get_upcoming` | Próximos eventos do Google Calendar |
 | `email_get_recent` | E-mails recentes (Gmail/Outlook) |
+| `google_gmail_send` | Envio de e-mails formatados via conector Google/Gmail |
+| `spotify_get_current` | Status e música atual em reprodução no Spotify |
+| `spotify_play` | Reprodução de faixas e playlists no Spotify |
+| `spotify_search` | Pesquisa de músicas e artistas no Spotify |
 | `onedrive_list_files` | Arquivos do OneDrive |
 | `get_geolocation_weather` | Geolocalização + clima em tempo real |
+| `self_evolve_codebase` | Auto-modificação e compilação do próprio código em C# |
 
 ### 🎨 Interface HUD Sci-Fi
 - **Esfera Holográfica** reativa (Three.js/WebGL) que pulsa conforme o estado do agente
 - **Painel de telemetria** em tempo real via SignalR
-- **Terminal integrado** para saída de sandbox/ferramentas
+- **Console Sandbox & Auto-Evolução** integrado
+- **Widget reativo de Spotify & Serviços Google**
 - **Design glassmorphism** com efeitos de partículas e glow
 
 ### 🔗 Integrações de Serviços
-- Google (Gmail, YouTube, Drive, Calendar)
-- LinkedIn
-- Spotify
-- E mais via arquitetura extensível de OAuth Providers
+- **Google** (Gmail, Gemini, Calendar, YouTube, Drive)
+- **Spotify** (Playback, busca de faixas e playlists)
+- **Microsoft 365** (OneDrive)
+- Arquitetura plugável sem obrigatoriedade de chaves hardcoded
 
 ---
 
@@ -220,91 +227,32 @@ SextaFeira/
 
 ---
 
-## 🚀 Instalação e Setup
+## 🚀 Instalação e Execução
 
-### 1. Clonar o Repositório
-```bash
-git clone https://github.com/seu-usuario/SextaFeira.git
-cd SextaFeira
-```
-
-### 2. Subir Infraestrutura Docker
-```bash
-docker-compose up -d
-```
-Isso inicia:
-- **PostgreSQL + pgvector** na porta `5432`
-- **Ollama** na porta `11434`
-
-### 3. (Opcional) Baixar Modelo Local
-```bash
-docker exec -it sextafeira-ollama ollama pull phi3:mini
-```
-
-### 4. Restaurar Backend
-```bash
-dotnet restore
-dotnet build
-```
-
-### 5. Instalar Frontend
-```bash
-cd src/SextaFeira.Web
-npm install
-```
-
----
-
-## ▶️ Execução Local
-
-### Backend (API + SignalR)
+### Backend (.NET 10 API)
 ```bash
 cd src/SextaFeira.WebApi
 dotnet run
 ```
-API disponível em: `http://localhost:5000`
+API disponível em `http://localhost:5000`
 
-Swagger UI: `http://localhost:5000/swagger`
-
-### Frontend (HUD React)
+### Frontend (React HUD)
 ```bash
 cd src/SextaFeira.Web
 npm run dev
 ```
-HUD disponível em: `http://localhost:5173`
-
-### Tudo via Docker Compose
-```bash
-docker-compose up --build
-```
-
----
-
-## 🔐 Variáveis de Ambiente
-
-| Variável | Descrição | Default |
-|----------|-----------|---------|
-| `ConnectionStrings__PostgresVector` | Connection string PostgreSQL | `Host=localhost;...` |
-| `Ollama__BaseUrl` | URL do servidor Ollama | `http://localhost:11434` |
-| `Ollama__Model` | Modelo Ollama padrão | `phi3:mini` |
-| `LLM__GoogleGemini__ApiKey` | API Key Google Gemini | *(vazio)* |
-| `LLM__OpenAI__ApiKey` | API Key OpenAI | *(vazio)* |
-| `LLM__Anthropic__ApiKey` | API Key Anthropic | *(vazio)* |
-| `LLM__Groq__ApiKey` | API Key Groq | *(vazio)* |
-| `OAuth__Google__ClientId` | OAuth Google Client ID | *(vazio)* |
-| `OAuth__Google__ClientSecret` | OAuth Google Client Secret | *(vazio)* |
-| `OAuth__LinkedIn__ClientId` | OAuth LinkedIn Client ID | *(vazio)* |
-| `OAuth__Spotify__ClientId` | OAuth Spotify Client ID | *(vazio)* |
+HUD disponível em `http://localhost:5173`
 
 ---
 
 ## 📡 API Endpoints
 
-### Core
+### Core & Auto-Evolução
 | Método | Rota | Descrição |
 |--------|------|-----------|
 | `POST` | `/api/core/process` | Processa input do usuário (texto/voz) |
 | `GET` | `/api/core/status` | Status do sistema e telemetria |
+| `POST` | `/api/evolution/evolve` | Altera e compila o próprio código C# em tempo de execução |
 
 ### Sandbox
 | Método | Rota | Descrição |
@@ -317,7 +265,7 @@ docker-compose up --build
 |--------|------|-----------|
 | `GET` | `/api/network/devices` | Escaneia dispositivos na rede local |
 
-### Integrações Pessoais
+### Integrações Pessoais (Spotify, Google, OneDrive)
 | Método | Rota | Descrição |
 |--------|------|-----------|
 | `GET` | `/api/personal/calendar` | Próximos eventos do calendário |
@@ -350,18 +298,64 @@ O Sexta-Feira suporta conexão fácil com múltiplos serviços externos. A arqui
 ### Serviços Suportados (Roadmap)
 | Serviço | Escopo | Status |
 |---------|--------|--------|
-| **Google** (Gmail, YouTube, Drive, Calendar) | Completo | 🔜 Em implementação |
+| **Google** (Gmail, YouTube, Drive, Calendar) | Completo | ✅ Conectado (MCP) |
+| **Spotify** | Reprodução + Playlists | ✅ Conectado (MCP) |
 | **LinkedIn** | Perfil + Feed | 🔜 Em implementação |
-| **Spotify** | Reprodução + Playlists | 🔜 Em implementação |
 | **GitHub** | Repos + Issues + PRs | 📋 Planejado |
 | **Microsoft 365** | Outlook + OneDrive + Teams | 📋 Planejado |
 | **Discord** | Mensagens + Canais | 📋 Planejado |
 | **Notion** | Páginas + Databases | 📋 Planejado |
 
 ### Como Funciona
-1. **Comando de Voz:** O usuário diz *"Sexta-Feira, conectar ao meu Google"*
-2. **Orquestrador:** Detecta a intenção e dispara o fluxo OAuth
-3. **HUD:** Exibe uma tela de login segura (popup/redirect) para o serviço
+1. **Comando de Voz:** O usuário diz *"Ei, Sexta-Feira, toque Starboy no Spotify"* ou *"Ei, Sexta-Feira, envie um e-mail"*
+2. **Orquestrador:** Detecta a intenção e aciona a ferramenta MCP correspondente
+3. **HUD:** Exibe os controles reativos na interface holográfica
+4. **Pronto:** Resposta executada e sintetizada por voz
+
+---
+
+## 🧬 Auto-Evolução do Código
+
+O Sexta-Feira é capaz de se **auto-desenvolver**, gerando e integrando novas funcionalidades autonomamente:
+
+### Protocolo de Auto-Evolução
+1. **Análise de Contexto** — O agente analisa a documentação em `.agents/` para entender a arquitetura
+2. **Geração de Código** — Usa a LLM para gerar implementações em C# seguindo as convenções
+3. **Sandbox & Compilação Testing** — Testa o código gerado via `dotnet build`
+4. **Self-Healing** — Se falhar, entra no loop de auto-correção automático e faz rollback se necessário
+5. **Integração & Log** — Se aprovado, integra o código ao projeto e atualiza `.agents/CHANGELOG.md`
+
+> ⚠️ **Segurança:** Todo código alterado passa por compilação rigorosa e backup temporário antes de ser aplicado.
+
+---
+
+## 📖 Documentação do Agente (.agents)
+
+A pasta `.agents/` contém documentação viva que o próprio sistema mantém atualizada. Ela serve como **contexto de referência** para que o agente (e desenvolvedores humanos) compreendam a arquitetura, convenções e estado atual do projeto.
+
+Veja [`.agents/README.md`](.agents/README.md) para o índice completo.
+
+---
+
+## 🗺️ Roadmap
+
+- [x] Clean Architecture + DDD scaffolding
+- [x] CognitiveOrchestrator com fallback multi-provider
+- [x] SelfHealingEngine com Docker Sandbox
+- [x] McpServerRegistry com 13 ferramentas ativas
+- [x] HUD Sci-Fi holográfica (React + Three.js)
+- [x] Geolocalização em tempo real (GPS/IP + clima)
+- [x] Network Scanner (rede local)
+- [x] SignalR telemetria em tempo real
+- [x] Conectores MCP Spotify (Playback, busca, track info)
+- [x] Conectores MCP Google (Gmail, Gemini, Calendar)
+- [x] Detecção de Wake-Word Multilíngue (`"Ei, Sexta feira"`, `"Hey Friday"`)
+- [x] Engine de Auto-Evolução do Código (`SelfEvolutionService`)
+- [ ] Testes E2E com Playwright
+- [ ] PWA + Service Worker offline
+- [ ] Whisper local (sem cloud)
+- [ ] Plugin system MCP dinâmico
+- [ ] Dashboard admin de tokens OAuth** Exibe uma tela de login segura (popup/redirect) para o serviço
 4. **Token Storage:** Tokens são armazenados de forma segura (criptografados) na memória persistente
 5. **Pronto:** Serviço fica disponível como ferramenta MCP
 

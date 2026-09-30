@@ -88,11 +88,20 @@ export const App: React.FC = () => {
 
   const generateLocalResponse = (query: string): string => {
     const q = query.toLowerCase();
+    if (q.includes('código') || q.includes('alterar') || q.includes('evolv') || q.includes('melhor') || q.includes('função')) {
+      return 'Protocolo de Auto-Evolução ativado. O núcleo da Sexta-Feira analisou a solicitação de alteração no próprio código, gerou as modificações em C# e validou a compilação do projeto com sucesso!';
+    }
+    if (q.includes('spotify') || q.includes('música') || q.includes('tocar') || q.includes('play')) {
+      return 'Conector MCP do Spotify acionado. Reproduzindo sua seleção nas caixas integradas via streaming.';
+    }
+    if (q.includes('email') || q.includes('gmail') || q.includes('google')) {
+      return 'Serviço Google MCP conectado. E-mails e eventos sincronizados com a nuvem em tempo real.';
+    }
     if (q.includes('restaurante') || q.includes('piracaia')) {
       return 'Identifiquei ótimas opções gastronômicas em Piracaia, SP, com destaque para a Rota das Represas e bistrôs artesanais no centro histórico.';
     }
     if (q.includes('status') || q.includes('sistema')) {
-      return 'Todos os subsistemas da Sexta-Feira operam em níveis nominais. O Hologram Core, Barramento MCP e o Sandbox Docker estão ativos.';
+      return 'Todos os subsistemas da Sexta-Feira operam em níveis nominais. O Hologram Core, Barramento MCP, Spotify Conector e Auto-Evolução estão ativos.';
     }
     if (q.includes('rede') || q.includes('scanner')) {
       return 'O scanner mapeou 5 nós na rede Wi-Fi 6, incluindo o Gateway principal, Smart TVs e sensores IoT.';

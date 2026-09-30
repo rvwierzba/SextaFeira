@@ -92,3 +92,24 @@ public class CodeExecutionJob
     public int RetryAttempts { get; set; } = 0;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
+
+public class SpotifyTrackItem
+{
+    public string Id { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public string Artist { get; set; } = string.Empty;
+    public string Album { get; set; } = string.Empty;
+    public int DurationMs { get; set; }
+    public bool IsPlaying { get; set; }
+    public string ContextUri { get; set; } = string.Empty;
+}
+
+public class SelfEvolutionResult
+{
+    public bool Succeeded { get; set; }
+    public string TargetFile { get; set; } = string.Empty;
+    public string FeatureDescription { get; set; } = string.Empty;
+    public string ChangesSummary { get; set; } = string.Empty;
+    public string BuildLog { get; set; } = string.Empty;
+    public DateTime ExecutedAt { get; set; } = DateTime.UtcNow;
+}

@@ -182,6 +182,39 @@ public class GeolocationController : ControllerBase
         [FromQuery] double? lat, 
         [FromQuery] double? lon, 
         CancellationToken cancellationToken)
+    {
+        var result = await _geoService.GetLiveLocationAndWeatherAsync(lat, lon, cancellationToken);
+        return Ok(result);
+    }
+}
+
+[ApiController]
+[Route("api/[controller]")]
+public class EvolutionController : ControllerBase
+{
+    private readonly ISelfEvolutionService _evolutionService;
+    private readonly IHubContext<HudTelemetryHub, IHudTelemetryClient> _telemetryHub;
+
+    public EvolutionController(
+        ISelfEvolutionService evolutionService,
+        IHubContext<HudTelemetryHub, IHudTelemetryClient> telemetryHub)
+    {
+        _evolutionService = evolutionService;
+        _telemetryHub = telemetryHub;
+    }
+
+    [HttpPost("evolve")]
+    public async Task<IActionResult> EvolveCodebase([FromBody] EvolveCodebaseRequest request, CancellationToken cancellationToken)
+    {
+        await _telemetryHub.Clients.All.ReceiveSandboxLog($"[AUTO-EVOLUTION] Iniciando protocolo de melhoria: {request.Instruction}");
+        var result = await _evolutionService.EvolveCodebaseAsync(request.Instruction, request.TargetFile, cancellationToken);
+        await _telemetryHub.Clients.All.ReceiveSandboxLog($"[AUTO-EVOLUTION RESULT] Sucesso: {result.Succeeded}. Logs:\n{result.ChangesSummary}");
+        return Ok(result);
+    }
+}
+
+public record EvolveCodebaseRequest(string Instruction, string? TargetFile = null);
+
 [ApiController]
 [Route("api/[controller]")]
 public class MemoryController : ControllerBase

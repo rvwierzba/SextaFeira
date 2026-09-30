@@ -6,14 +6,14 @@ Esta pasta contém a **documentação viva** do projeto Sexta-Feira. Ela é mant
 
 | Documento | Descrição | Última Atualização |
 |-----------|-----------|-------------------|
-| [ARCHITECTURE.md](ARCHITECTURE.md) | Decisões arquiteturais, padrões de design, e fluxo de dependências | 2026-09-17 |
-| [CONVENTIONS.md](CONVENTIONS.md) | Padrões de código, naming, estrutura de pastas e convenções | 2026-09-17 |
-| [DOMAIN_MODEL.md](DOMAIN_MODEL.md) | Modelo de domínio: entidades, value objects, interfaces e enums | 2026-09-17 |
-| [INFRASTRUCTURE_GUIDE.md](INFRASTRUCTURE_GUIDE.md) | Guia de implementações na camada de Infrastructure | 2026-09-17 |
-| [MCP_TOOLS_REGISTRY.md](MCP_TOOLS_REGISTRY.md) | Catálogo completo de ferramentas MCP registradas | 2026-09-17 |
-| [OAUTH_INTEGRATION_GUIDE.md](OAUTH_INTEGRATION_GUIDE.md) | Guia de integração com serviços externos via OAuth 2.0 | 2026-09-17 |
-| [SELF_EVOLUTION_PROTOCOL.md](SELF_EVOLUTION_PROTOCOL.md) | Protocolo de auto-evolução e auto-desenvolvimento | 2026-09-17 |
-| [CHANGELOG.md](CHANGELOG.md) | Log de mudanças evolutivas (mantido automaticamente) | 2026-09-17 |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Decisões arquiteturais, padrões de design, e fluxo de dependências | 2026-09-30 |
+| [CONVENTIONS.md](CONVENTIONS.md) | Padrões de código, naming, estrutura de pastas e convenções | 2026-09-30 |
+| [DOMAIN_MODEL.md](DOMAIN_MODEL.md) | Modelo de domínio: entidades, value objects, interfaces e enums | 2026-09-30 |
+| [INFRASTRUCTURE_GUIDE.md](INFRASTRUCTURE_GUIDE.md) | Guia de implementações na camada de Infrastructure | 2026-09-30 |
+| [MCP_TOOLS_REGISTRY.md](MCP_TOOLS_REGISTRY.md) | Catálogo completo de 13 ferramentas MCP registradas | 2026-09-30 |
+| [OAUTH_INTEGRATION_GUIDE.md](OAUTH_INTEGRATION_GUIDE.md) | Guia de integração com serviços externos via MCP e OAuth | 2026-09-30 |
+| [SELF_EVOLUTION_PROTOCOL.md](SELF_EVOLUTION_PROTOCOL.md) | Protocolo de auto-evolução e auto-desenvolvimento | 2026-09-30 |
+| [CHANGELOG.md](CHANGELOG.md) | Log de mudanças evolutivas (mantido automaticamente) | 2026-09-30 |
 
 ## 🤖 Auto-Manutenção
 

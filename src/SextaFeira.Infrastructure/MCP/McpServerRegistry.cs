@@ -12,6 +12,7 @@ public class McpServerRegistry : IMcpHost
     private readonly ISandboxService _sandboxService;
     private readonly IPersonalIntegrationsService _personalIntegrations;
     private readonly IGeolocationService _geolocationService;
+    private readonly ISelfEvolutionService _selfEvolutionService;
     private readonly ILogger<McpServerRegistry> _logger;
 
     public McpServerRegistry(
@@ -20,6 +21,7 @@ public class McpServerRegistry : IMcpHost
         ISandboxService sandboxService,
         IPersonalIntegrationsService personalIntegrations,
         IGeolocationService geolocationService,
+        ISelfEvolutionService selfEvolutionService,
         ILogger<McpServerRegistry> logger)
     {
         _networkScanner = networkScanner;
@@ -27,6 +29,7 @@ public class McpServerRegistry : IMcpHost
         _sandboxService = sandboxService;
         _personalIntegrations = personalIntegrations;
         _geolocationService = geolocationService;
+        _selfEvolutionService = selfEvolutionService;
         _logger = logger;
     }
 
@@ -71,6 +74,30 @@ public class McpServerRegistry : IMcpHost
                 Category: ToolCategory.Email
             ),
             new(
+                Name: "google_gmail_send",
+                Description: "Envia e-mail formatado usando o conector MCP de e-mail do Google / Gmail.",
+                ParametersJsonSchema: "{\"type\":\"object\",\"properties\":{\"recipient\":{\"type\":\"string\"},\"subject\":{\"type\":\"string\"},\"body\":{\"type\":\"string\"}},\"required\":[\"recipient\",\"subject\",\"body\"]}",
+                Category: ToolCategory.GoogleServices
+            ),
+            new(
+                Name: "spotify_get_current",
+                Description: "Obtém o status de reprodução e a música atual sendo tocada no Spotify.",
+                ParametersJsonSchema: "{}",
+                Category: ToolCategory.Spotify
+            ),
+            new(
+                Name: "spotify_play",
+                Description: "Reproduz uma música, artista ou playlist no Spotify.",
+                ParametersJsonSchema: "{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"}},\"required\":[\"query\"]}",
+                Category: ToolCategory.Spotify
+            ),
+            new(
+                Name: "spotify_search",
+                Description: "Pesquisa por faixas, álbuns ou artistas no catálogo do Spotify.",
+                ParametersJsonSchema: "{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"}},\"required\":[\"query\"]}",
+                Category: ToolCategory.Spotify
+            ),
+            new(
                 Name: "onedrive_list_files",
                 Description: "Lista diretórios e arquivos armazenados no OneDrive sincronizado.",
                 ParametersJsonSchema: "{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"}}}",
@@ -81,6 +108,12 @@ public class McpServerRegistry : IMcpHost
                 Description: "Obtém as coordenadas de geolocalização e previsão do tempo atual para Piracaia, SP e região.",
                 ParametersJsonSchema: "{}",
                 Category: ToolCategory.Geolocation
+            ),
+            new(
+                Name: "self_evolve_codebase",
+                Description: "Executa a auto-modificação/evolução do próprio código da Sexta-Feira para criar novas funções ou reparar funcionalidades.",
+                ParametersJsonSchema: "{\"type\":\"object\",\"properties\":{\"instruction\":{\"type\":\"string\"},\"targetFile\":{\"type\":\"string\"}},\"required\":[\"instruction\"]}",
+                Category: ToolCategory.CodeEvolution
             )
         };
 
@@ -132,6 +165,36 @@ public class McpServerRegistry : IMcpHost
                     var emails = await _personalIntegrations.GetRecentEmailsAsync(5, cancellationToken);
                     return new ToolExecutionResult(toolName, true, JsonSerializer.Serialize(emails));
 
+                case "google_gmail_send":
+                    using (var doc = JsonDocument.Parse(argumentsJson))
+                    {
+                        var recipient = doc.RootElement.TryGetProperty("recipient", out var r) ? r.GetString() ?? "" : "";
+                        var subject = doc.RootElement.TryGetProperty("subject", out var s) ? s.GetString() ?? "" : "";
+                        var body = doc.RootElement.TryGetProperty("body", out var b) ? b.GetString() ?? "" : "";
+                        var sent = await _personalIntegrations.SendEmailAsync(recipient, subject, body, cancellationToken);
+                        return new ToolExecutionResult(toolName, sent, sent ? "E-mail enviado com sucesso." : "Falha ao enviar e-mail.");
+                    }
+
+                case "spotify_get_current":
+                    var currentTrack = await _personalIntegrations.GetCurrentSpotifyPlaybackAsync(cancellationToken);
+                    return new ToolExecutionResult(toolName, true, JsonSerializer.Serialize(currentTrack));
+
+                case "spotify_play":
+                    using (var doc = JsonDocument.Parse(argumentsJson))
+                    {
+                        var query = doc.RootElement.TryGetProperty("query", out var q) ? q.GetString() ?? "" : "";
+                        var played = await _personalIntegrations.PlaySpotifyTrackAsync(query, cancellationToken);
+                        return new ToolExecutionResult(toolName, played, $"Reproduzindo no Spotify: {query}");
+                    }
+
+                case "spotify_search":
+                    using (var doc = JsonDocument.Parse(argumentsJson))
+                    {
+                        var query = doc.RootElement.TryGetProperty("query", out var q) ? q.GetString() ?? "" : "";
+                        var tracks = await _personalIntegrations.SearchSpotifyTracksAsync(query, 5, cancellationToken);
+                        return new ToolExecutionResult(toolName, true, JsonSerializer.Serialize(tracks));
+                    }
+
                 case "onedrive_list_files":
                     var files = await _personalIntegrations.GetOneDriveFilesAsync("/", cancellationToken);
                     return new ToolExecutionResult(toolName, true, JsonSerializer.Serialize(files));
@@ -151,6 +214,15 @@ public class McpServerRegistry : IMcpHost
                     }
                     var liveGeoWeather = await _geolocationService.GetLiveLocationAndWeatherAsync(clientLat, clientLon, cancellationToken);
                     return new ToolExecutionResult(toolName, true, JsonSerializer.Serialize(liveGeoWeather));
+
+                case "self_evolve_codebase":
+                    using (var doc = JsonDocument.Parse(argumentsJson))
+                    {
+                        var instruction = doc.RootElement.TryGetProperty("instruction", out var i) ? i.GetString() ?? "" : "";
+                        var targetFile = doc.RootElement.TryGetProperty("targetFile", out var tf) ? tf.GetString() : null;
+                        var result = await _selfEvolutionService.EvolveCodebaseAsync(instruction, targetFile, cancellationToken);
+                        return new ToolExecutionResult(toolName, result.Succeeded, JsonSerializer.Serialize(result));
+                    }
 
                 default:
                     return new ToolExecutionResult(toolName, false, "Ferramenta não reconhecida no registro MCP.");

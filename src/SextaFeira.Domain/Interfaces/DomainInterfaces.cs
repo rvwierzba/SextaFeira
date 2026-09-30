@@ -108,12 +108,28 @@ public interface IWebAutomationService
     Task<string> SearchWebAsync(string query, CancellationToken cancellationToken = default);
 }
 
+public interface IStealthBrowser
+{
+    Task<string> NavigateAndExtractMarkdownAsync(string url, CancellationToken cancellationToken = default);
+    Task<byte[]> CaptureScreenshotAsync(string url, CancellationToken cancellationToken = default);
+    Task<string> SearchWebStealthAsync(string query, CancellationToken cancellationToken = default);
+}
+
 public interface IPersonalIntegrationsService
 {
     Task<List<CalendarEventItem>> GetUpcomingEventsAsync(int count = 10, CancellationToken cancellationToken = default);
     Task<CalendarEventItem> CreateCalendarEventAsync(CalendarEventItem eventItem, CancellationToken cancellationToken = default);
     Task<List<EmailMessageItem>> GetRecentEmailsAsync(int count = 10, CancellationToken cancellationToken = default);
+    Task<bool> SendEmailAsync(string recipient, string subject, string body, CancellationToken cancellationToken = default);
     Task<List<OneDriveFileItem>> GetOneDriveFilesAsync(string folderPath = "/", CancellationToken cancellationToken = default);
+    Task<SpotifyTrackItem> GetCurrentSpotifyPlaybackAsync(CancellationToken cancellationToken = default);
+    Task<bool> PlaySpotifyTrackAsync(string queryOrUri, CancellationToken cancellationToken = default);
+    Task<List<SpotifyTrackItem>> SearchSpotifyTracksAsync(string query, int limit = 5, CancellationToken cancellationToken = default);
+}
+
+public interface ISelfEvolutionService
+{
+    Task<SelfEvolutionResult> EvolveCodebaseAsync(string goalInstruction, string? targetFilePath = null, CancellationToken cancellationToken = default);
 }
 
 public interface IVoiceEngine

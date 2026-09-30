@@ -17,28 +17,30 @@ export const SandboxConsoleWidget: React.FC<SandboxConsoleProps> = ({
     <div className="hud-panel" style={{ width: '460px' }}>
       <div className="hud-panel-header">
         <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Terminal size={14} color="#00f0ff" /> CODE SANDBOX (ZERO-TRUST DOCKER)
+          <Terminal size={14} color="#00f0ff" /> CODE SANDBOX & AUTO-EVOLUÇÃO (SELF-CODING)
         </span>
-        <button
-          onClick={onRunTestCode}
-          disabled={isRunning}
-          style={{
-            background: 'rgba(0, 240, 255, 0.2)',
-            border: '1px solid var(--hud-cyan)',
-            color: '#fff',
-            cursor: 'pointer',
-            padding: '2px 8px',
-            borderRadius: '3px',
-            fontSize: '0.65rem',
-            fontFamily: 'var(--hud-font-orbitron)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px'
-          }}
-        >
-          {isRunning ? <RotateCcw size={10} className="hud-pulse-glow" /> : <Play size={10} />}
-          {isRunning ? 'EXECUTANDO...' : 'TEST SANDBOX'}
-        </button>
+        <div style={{ display: 'flex', gap: '6px' }}>
+          <button
+            onClick={onRunTestCode}
+            disabled={isRunning}
+            style={{
+              background: 'rgba(0, 240, 255, 0.2)',
+              border: '1px solid var(--hud-cyan)',
+              color: '#fff',
+              cursor: 'pointer',
+              padding: '2px 8px',
+              borderRadius: '3px',
+              fontSize: '0.65rem',
+              fontFamily: 'var(--hud-font-orbitron)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+          >
+            {isRunning ? <RotateCcw size={10} className="hud-pulse-glow" /> : <Play size={10} />}
+            {isRunning ? 'EXECUTANDO...' : 'TEST SANDBOX'}
+          </button>
+        </div>
       </div>
 
       <div className="hud-console">
@@ -49,7 +51,7 @@ export const SandboxConsoleWidget: React.FC<SandboxConsoleProps> = ({
         ))}
         {logs.length === 0 && (
           <div style={{ color: 'rgba(0, 240, 255, 0.4)' }}>
-            [DOCKER SANDBOX ISOLATED] Aguardando pipeline de compilação ou self-healing code execution...
+            [DOCKER SANDBOX & AUTO-EVOLUÇÃO] Aguardando pipeline de compilação ou comando de auto-modificação de código...
           </div>
         )}
       </div>
@@ -148,7 +150,7 @@ export const HudStatusBar: React.FC<HudStatusBarProps> = ({
         </div>
 
         <div style={{ color: 'rgba(0, 240, 255, 0.7)', fontSize: '0.75rem', fontFamily: 'var(--hud-font-mono)' }}>
-          WAKE-WORD: "SEXTA-FEIRA" (PT-BR ATIVO)
+          WAKE-WORD MULTILÍNGUE: "EI, SEXTA-FEIRA" / "HEY FRIDAY"
         </div>
       </div>
 

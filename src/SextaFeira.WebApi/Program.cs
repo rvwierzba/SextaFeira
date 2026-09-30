@@ -3,6 +3,7 @@ using SextaFeira.Application.Orchestrator;
 using SextaFeira.Application.Services;
 using SextaFeira.Domain.Enums;
 using SextaFeira.Domain.Interfaces;
+using SextaFeira.Infrastructure.Geolocation;
 using SextaFeira.Infrastructure.Integrations;
 using SextaFeira.Infrastructure.LLMs;
 using SextaFeira.Infrastructure.MCP;
@@ -78,6 +79,7 @@ builder.Services.AddScoped<IMcpHost, McpServerRegistry>();
 builder.Services.AddScoped<CognitiveOrchestrator>();
 builder.Services.AddScoped<SelfHealingEngine>();
 builder.Services.AddScoped<MemoryRecyclerService>();
+builder.Services.AddScoped<ISelfEvolutionService, SelfEvolutionService>();
 
 var app = builder.Build();
 

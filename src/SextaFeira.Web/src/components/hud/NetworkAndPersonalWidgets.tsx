@@ -1,5 +1,5 @@
 import React from 'react';
-import { Wifi, Calendar, Mail, Folder, HardDrive } from 'lucide-react';
+import { Wifi, Calendar, Mail, Folder, HardDrive, Music } from 'lucide-react';
 
 interface NetworkDevice {
   ip: string;
@@ -124,6 +124,23 @@ export const PersonalServicesWidget: React.FC = () => {
               </tr>
             </tbody>
           </table>
+        </div>
+
+        {/* Spotify Integration */}
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#1db954', fontSize: '0.72rem', fontFamily: 'var(--hud-font-orbitron)', marginBottom: '4px' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Music size={13} color="#1db954" /> SPOTIFY (PLAYBACK MCP)
+            </span>
+            <span className="hud-badge" style={{ background: 'rgba(29, 185, 84, 0.15)', color: '#1db954', borderColor: '#1db954' }}>LIVE</span>
+          </div>
+          <div style={{ background: 'rgba(29, 185, 84, 0.08)', border: '1px solid rgba(29, 185, 84, 0.3)', borderRadius: '4px', padding: '6px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.78rem' }}>Starboy</div>
+              <div style={{ fontSize: '0.68rem', color: 'rgba(255, 255, 255, 0.7)' }}>The Weeknd ft. Daft Punk</div>
+            </div>
+            <span className="hud-badge hud-badge-active" style={{ background: '#1db954', color: '#000', fontWeight: 800 }}>TOCANDO</span>
+          </div>
         </div>
 
         {/* OneDrive Files */}

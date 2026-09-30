@@ -101,6 +101,12 @@ public class PersonalIntegrationsService : IPersonalIntegrationsService
         return Task.FromResult(emails.Take(count).ToList());
     }
 
+    public Task<bool> SendEmailAsync(string recipient, string subject, string body, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Enviando e-mail via Google/Gmail MCP Conector para {Recipient} | Assunto: {Subject}", recipient, subject);
+        return Task.FromResult(true);
+    }
+
     public Task<List<OneDriveFileItem>> GetOneDriveFilesAsync(string folderPath = "/", CancellationToken cancellationToken = default)
     {
         var files = new List<OneDriveFileItem>
@@ -113,5 +119,37 @@ public class PersonalIntegrationsService : IPersonalIntegrationsService
         };
 
         return Task.FromResult(files);
+    }
+
+    public Task<SpotifyTrackItem> GetCurrentSpotifyPlaybackAsync(CancellationToken cancellationToken = default)
+    {
+        var current = new SpotifyTrackItem
+        {
+            Id = "spot-001",
+            Title = "Starboy",
+            Artist = "The Weeknd ft. Daft Punk",
+            Album = "Starboy",
+            DurationMs = 230000,
+            IsPlaying = true,
+            ContextUri = "spotify:track:75eeB0gQ36eX"
+        };
+        return Task.FromResult(current);
+    }
+
+    public Task<bool> PlaySpotifyTrackAsync(string queryOrUri, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Spotify MCP Provider reproduzindo faixa ou pesquisa: {Query}", queryOrUri);
+        return Task.FromResult(true);
+    }
+
+    public Task<List<SpotifyTrackItem>> SearchSpotifyTracksAsync(string query, int limit = 5, CancellationToken cancellationToken = default)
+    {
+        var mockResults = new List<SpotifyTrackItem>
+        {
+            new() { Id = "sp-1", Title = $"{query} (Remix Cyberpunk)", Artist = "SextaFeira Synthesizer", Album = "Sci-Fi Hits", DurationMs = 210000, IsPlaying = false },
+            new() { Id = "sp-2", Title = "Blinding Lights", Artist = "The Weeknd", Album = "After Hours", DurationMs = 200000, IsPlaying = false },
+            new() { Id = "sp-3", Title = "Midnight City", Artist = "M83", Album = "Hurry Up, We're Dreaming", DurationMs = 243000, IsPlaying = false }
+        };
+        return Task.FromResult(mockResults.Take(limit).ToList());
     }
 }
