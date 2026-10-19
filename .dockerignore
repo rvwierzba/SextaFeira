@@ -1,0 +1,13 @@
+# Git and IDE
+.git/
+.vscode/
+.idea/
+
+# .NET build artifacts
+**/bin/
+**/obj/
+
+# Node.js
+**/node_modules/
+**/dist/
+

@@ -6,6 +6,7 @@ COPY src/SextaFeira.Domain/*.csproj ./src/SextaFeira.Domain/
 COPY src/SextaFeira.Application/*.csproj ./src/SextaFeira.Application/
 COPY src/SextaFeira.Infrastructure/*.csproj ./src/SextaFeira.Infrastructure/
 COPY src/SextaFeira.WebApi/*.csproj ./src/SextaFeira.WebApi/
+COPY tests/SextaFeira.Tests/*.csproj ./tests/SextaFeira.Tests/
 
 RUN dotnet restore SextaFeira.sln
 

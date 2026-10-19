@@ -241,7 +241,43 @@ API disponível em `http://localhost:5000`
 cd src/SextaFeira.Web
 npm run dev
 ```
-HUD disponível em `http://localhost:5173`
+HUD disponível em: `http://localhost:5173`
+
+### Tudo via Docker Compose (Recomendado)
+Para subir o ecossistema completo (PostgreSQL + pgvector, Ollama, Backend .NET WebApi e Frontend React/Nginx):
+```bash
+docker compose up -d --build
+```
+
+Serviços disponíveis:
+- **Interface Web HUD 3D**: `http://localhost:5173`
+- **Swagger / API REST**: `http://localhost:5000/swagger`
+- **Banco de Dados pgvector**: `localhost:5432`
+- **Ollama**: `http://localhost:11434`
+
+Para verificar o status e logs dos containers:
+```bash
+docker compose ps
+docker compose logs -f
+```
+
+---
+
+## 🔐 Variáveis de Ambiente
+
+| Variável | Descrição | Default |
+|----------|-----------|---------|
+| `ConnectionStrings__PostgresVector` | Connection string PostgreSQL | `Host=localhost;...` |
+| `Ollama__BaseUrl` | URL do servidor Ollama | `http://localhost:11434` |
+| `Ollama__Model` | Modelo Ollama padrão | `phi3:mini` |
+| `LLM__GoogleGemini__ApiKey` | API Key Google Gemini | *(vazio)* |
+| `LLM__OpenAI__ApiKey` | API Key OpenAI | *(vazio)* |
+| `LLM__Anthropic__ApiKey` | API Key Anthropic | *(vazio)* |
+| `LLM__Groq__ApiKey` | API Key Groq | *(vazio)* |
+| `OAuth__Google__ClientId` | OAuth Google Client ID | *(vazio)* |
+| `OAuth__Google__ClientSecret` | OAuth Google Client Secret | *(vazio)* |
+| `OAuth__LinkedIn__ClientId` | OAuth LinkedIn Client ID | *(vazio)* |
+| `OAuth__Spotify__ClientId` | OAuth Spotify Client ID | *(vazio)* |
 
 ---
 
