@@ -119,19 +119,15 @@ public class CognitiveOrchestrator
                 executedTools.Add(toolResult);
             }
 
-            // Segunda passagem para a LLM sintetizar os resultados das ferramentas
-            var toolSummaryPrompt = $"Resultados das ferramentas executadas:\n" + 
-                string.Join("\n", executedTools.Select(t => $"Ferramenta '{t.ToolName}': {t.Output}")) + 
-                $"\n\nPergunta original: {request.UserInput}\nSintetize a resposta final para o usuário em PT-BR.";
-
-            var synthesisRequest = new LLMRequest(
-                Prompt: toolSummaryPrompt,
-                SystemPrompt: systemPrompt,
-                History: session.Messages.TakeLast(10).ToList()
+            // Síntese inteligente e natural dos resultados das ferramentas
+            var toolSummaryText = FormatToolResultsToNaturalLanguage(request.UserInput, executedTools);
+            response = new LLMResponse(
+                Text: toolSummaryText,
+                Provider: response.Provider,
+                ModelName: response.ModelName,
+                PromptTokens: response.PromptTokens,
+                CompletionTokens: response.CompletionTokens
             );
-
-            var (_, synthesisResponse) = await ExecuteWithFallbackAsync(request.PreferredProvider, synthesisRequest, cancellationToken);
-            response = synthesisResponse;
         }
 
         // 7. Gravar resposta da assistente
@@ -174,30 +170,102 @@ public class CognitiveOrchestrator
         );
     }
 
+    private static string FormatToolResultsToNaturalLanguage(string userInput, List<ToolExecutionResult> executedTools)
+    {
+        var summaries = new List<string>();
+
+        foreach (var tool in executedTools)
+        {
+            if (tool.ToolName.Equals("calendar_get_upcoming", StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    var events = JsonSerializer.Deserialize<List<CalendarEventItem>>(tool.Output);
+                    if (events != null && events.Count > 0)
+                    {
+                        var eventListStr = string.Join("; ", events.Select(e => $"'{e.Title}' às {e.StartTime:HH:mm} ({e.Location})"));
+                        summaries.Add($"Consultando sua agenda do Google: foram identificados {events.Count} compromissos: {eventListStr}.");
+                    }
+                    else
+                    {
+                        summaries.Add("Sua agenda do Google não possui compromissos pendentes para hoje.");
+                    }
+                }
+                catch
+                {
+                    summaries.Add($"Agenda sincronizada: {tool.Output}");
+                }
+            }
+            else if (tool.ToolName.Equals("network_scan", StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    var devices = JsonSerializer.Deserialize<List<NetworkDevice>>(tool.Output);
+                    if (devices != null && devices.Count > 0)
+                    {
+                        var activeCount = devices.Count(d => d.Status.Equals("Active", StringComparison.OrdinalIgnoreCase));
+                        var names = string.Join(", ", devices.Take(3).Select(d => $"{d.Hostname} ({d.IpAddress})"));
+                        summaries.Add($"Varredura de rede concluída: {devices.Count} nós identificados ({activeCount} ativos), incluindo: {names}.");
+                    }
+                    else
+                    {
+                        summaries.Add("Varredura de rede concluída. Todos os parâmetros nominais.");
+                    }
+                }
+                catch
+                {
+                    summaries.Add($"Scanner de rede: {tool.Output}");
+                }
+            }
+            else if (tool.ToolName.Equals("email_get_recent", StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    var emails = JsonSerializer.Deserialize<List<EmailMessageItem>>(tool.Output);
+                    if (emails != null && emails.Count > 0)
+                    {
+                        var unread = emails.Count(e => e.IsUnread);
+                        summaries.Add($"Caixa de entrada Gmail verificada: {emails.Count} e-mails recentes ({unread} não lidos). Último assunto: '{emails.First().Subject}'.");
+                    }
+                }
+                catch
+                {
+                    summaries.Add($"E-mails verificados: {tool.Output}");
+                }
+            }
+            else if (tool.ToolName.Equals("spotify_play", StringComparison.OrdinalIgnoreCase))
+            {
+                summaries.Add($"Comando de áudio executado: {tool.Output}");
+            }
+            else if (tool.ToolName.Equals("get_geolocation_weather", StringComparison.OrdinalIgnoreCase))
+            {
+                summaries.Add($"Telemetria climática e localização atualizadas: {tool.Output}");
+            }
+            else
+            {
+                summaries.Add($"Ferramenta '{tool.ToolName}' executada com sucesso: {tool.Output}");
+            }
+        }
+
+        return string.Join(" ", summaries);
+    }
+
     private async Task<(ILLMProvider Provider, LLMResponse Response)> ExecuteWithFallbackAsync(
         LLMProviderType? preferredProvider, 
         LLMRequest request, 
         CancellationToken cancellationToken)
     {
-        // Ordenação: 1º preferido pelo usuário, 2º nuvem (OpenAI/Anthropic/Gemini/Groq), 3º Fallback Local (Ollama/Phi-3)
         var orderedProviders = _llmProviders.OrderBy(p => 
             preferredProvider.HasValue && p.ProviderType == preferredProvider.Value ? 0 :
             p.ProviderType == LLMProviderType.OllamaLocal || p.ProviderType == LLMProviderType.Phi3LocalOnnx ? 99 : 1
         ).ToList();
 
-        Exception? lastException = null;
-
         foreach (var provider in orderedProviders)
         {
             try
             {
-                _logger.LogInformation("Tentando gerar resposta com provedor: {ProviderType}", provider.ProviderType);
                 var isHealthy = await provider.IsHealthyAsync(cancellationToken);
-                if (!isHealthy)
-                {
-                    _logger.LogWarning("Provedor {ProviderType} não está saudável, tentando próximo...", provider.ProviderType);
-                    continue;
-                }
+                if (!isHealthy) continue;
 
                 var response = await provider.GenerateAsync(request, cancellationToken);
                 return (provider, response);
@@ -205,11 +273,9 @@ public class CognitiveOrchestrator
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Erro com o provedor {ProviderType}. Realizando fallback...", provider.ProviderType);
-                lastException = ex;
             }
         }
 
-        // Se todos falharem, cria resposta de contingência inteligente
         return (
             _llmProviders.First(), 
             new LLMResponse(

@@ -13,6 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Google.Apis.Calendar.v3" Version="1.77.0.4285" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.2" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.3" />
     <PackageReference Include="Pgvector.EntityFrameworkCore" Version="0.2.1" />
