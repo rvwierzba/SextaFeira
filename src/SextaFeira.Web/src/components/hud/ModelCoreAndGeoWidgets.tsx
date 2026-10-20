@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Cpu, Server, Activity } from 'lucide-react';
+import { Cpu, Server, Activity, Key, Check } from 'lucide-react';
 
 interface ModelCoreWidgetProps {
   activeModel?: string;
@@ -8,44 +8,141 @@ interface ModelCoreWidgetProps {
   memoryLoad?: string;
 }
 
-export const ModelCoreWidget: React.FC<ModelCoreWidgetProps> = ({
-  activeModel = 'Phi-3 Mini (Local) - Active (Med. Load)',
-  mcpStatus = 'MCP Connected (8 Tools)',
-  cpuLoad = '18%',
-  memoryLoad = '42%'
-}) => {
+export const ModelCoreWidget: React.FC<ModelCoreWidgetProps> = () => {
+  const [status, setStatus] = useState({
+    activeModel: 'Google Gemini 2.0 Flash (Cloud Ultra-Fast)',
+    userAccount: 'rafaelwierzba@gmail.com',
+    mcpStatus: 'MCP Connected (8 Tools)',
+    cpuLoad: '12%',
+    memoryLoad: '32%',
+    hasGeminiKey: false
+  });
+  const [showKeyInput, setShowKeyInput] = useState(false);
+  const [keyInput, setKeyInput] = useState('');
+  const [keySaved, setKeySaved] = useState(false);
+
+  useEffect(() => {
+    fetch('http://localhost:5000/api/core/status')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data) {
+          setStatus({
+            activeModel: data.activeModel || 'Google Gemini 2.0 Flash',
+            userAccount: data.userAccount || 'rafaelwierzba@gmail.com',
+            mcpStatus: data.mcpOrchestrator || 'MCP Connected (8 Tools)',
+            cpuLoad: data.cpuUsage || '12%',
+            memoryLoad: data.memoryUsage || '32%',
+            hasGeminiKey: !!data.hasGeminiKey
+          });
+        }
+      })
+      .catch(() => {});
+  }, [keySaved]);
+
+  const handleSaveKey = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!keyInput.trim()) return;
+
+    try {
+      const res = await fetch('http://localhost:5000/api/core/config/gemini-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: keyInput.trim() })
+      });
+      if (res.ok) {
+        setKeySaved(true);
+        setShowKeyInput(false);
+        setKeyInput('');
+      }
+    } catch {
+      //
+    }
+  };
+
   return (
-    <div className="hud-panel" style={{ width: '310px' }}>
+    <div className="hud-panel" style={{ width: '330px' }}>
       <div className="hud-panel-header">
         <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Cpu size={14} color="#00f0ff" /> MODEL CORE & ORCHESTRATOR
+          <Cpu size={14} color="#00f0ff" /> GOOGLE GEMINI CLOUD ENGINE
         </span>
-        <span className="hud-badge hud-badge-active">ONLINE</span>
+        <button
+          onClick={() => setShowKeyInput(!showKeyInput)}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: '#00f0ff',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            fontSize: '0.65rem',
+            fontFamily: 'var(--hud-font-orbitron)'
+          }}
+        >
+          <Key size={11} /> API KEY
+        </button>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.8rem' }}>
         <div>
-          <span style={{ color: 'rgba(0, 240, 255, 0.7)', fontSize: '0.7rem' }}>ACTIVE LLM ENGINE:</span>
+          <span style={{ color: 'rgba(0, 240, 255, 0.7)', fontSize: '0.7rem' }}>CONTA & NÚCLEO ATIVO:</span>
           <div style={{ color: '#fff', fontWeight: 600, fontFamily: 'var(--hud-font-orbitron)', fontSize: '0.75rem', marginTop: '2px' }}>
-            {activeModel}
+            {status.activeModel}
+          </div>
+          <div style={{ color: 'rgba(0, 255, 136, 0.8)', fontSize: '0.68rem', fontFamily: 'var(--hud-font-mono)' }}>
+            User: {status.userAccount}
           </div>
         </div>
 
+        {showKeyInput && (
+          <form onSubmit={handleSaveKey} style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
+            <input
+              type="password"
+              placeholder="Inserir Gemini API Key..."
+              value={keyInput}
+              onChange={(e) => setKeyInput(e.target.value)}
+              style={{
+                flex: 1,
+                background: 'rgba(0, 0, 0, 0.6)',
+                border: '1px solid #00f0ff',
+                color: '#fff',
+                padding: '4px 6px',
+                fontSize: '0.7rem',
+                borderRadius: '3px'
+              }}
+            />
+            <button
+              type="submit"
+              style={{
+                background: '#00f0ff',
+                border: 'none',
+                color: '#000',
+                fontWeight: 700,
+                padding: '4px 8px',
+                borderRadius: '3px',
+                cursor: 'pointer'
+              }}
+            >
+              <Check size={12} />
+            </button>
+          </form>
+        )}
+
         <div>
-          <span style={{ color: 'rgba(0, 240, 255, 0.7)', fontSize: '0.7rem' }}>ORCHESTRATOR BUS:</span>
+          <span style={{ color: 'rgba(0, 240, 255, 0.7)', fontSize: '0.7rem' }}>BARRAMENTO MCP:</span>
           <div style={{ color: '#00f0ff', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
-            <Server size={13} /> {mcpStatus}
+            <Server size={13} /> {status.mcpStatus}
           </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }}>
           <div style={{ background: 'rgba(0, 240, 255, 0.05)', padding: '6px', borderRadius: '4px', border: '1px solid rgba(0, 240, 255, 0.15)' }}>
             <div style={{ fontSize: '0.65rem', color: 'rgba(0, 240, 255, 0.7)' }}>CPU LOAD</div>
-            <div style={{ fontSize: '1rem', fontWeight: 700, color: '#00f0ff', fontFamily: 'var(--hud-font-mono)' }}>{cpuLoad}</div>
+            <div style={{ fontSize: '1rem', fontWeight: 700, color: '#00f0ff', fontFamily: 'var(--hud-font-mono)' }}>{status.cpuLoad}</div>
           </div>
           <div style={{ background: 'rgba(0, 240, 255, 0.05)', padding: '6px', borderRadius: '4px', border: '1px solid rgba(0, 240, 255, 0.15)' }}>
             <div style={{ fontSize: '0.65rem', color: 'rgba(0, 240, 255, 0.7)' }}>RAM ALLOCATED</div>
-            <div style={{ fontSize: '1rem', fontWeight: 700, color: '#00ff88', fontFamily: 'var(--hud-font-mono)' }}>{memoryLoad}</div>
+            <div style={{ fontSize: '1rem', fontWeight: 700, color: '#00ff88', fontFamily: 'var(--hud-font-mono)' }}>{status.memoryLoad}</div>
           </div>
         </div>
       </div>
@@ -85,7 +182,6 @@ export const GeolocationWidget: React.FC = () => {
   const [source, setSource] = useState<string>('GPS LOCKING');
 
   useEffect(() => {
-    // 1. Tentar obter coordenadas do GPS do navegador em tempo real
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         async (position) => {
@@ -93,13 +189,11 @@ export const GeolocationWidget: React.FC = () => {
           const lon = position.coords.longitude;
 
           try {
-            // Chamar endpoint do backend ou OpenStreetMap direto
             const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
             const json = await res.json();
             const city = json.address?.city || json.address?.town || json.address?.municipality || 'Localização';
             const state = json.address?.state || 'SP';
 
-            // Consultar Open-Meteo em tempo real
             const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m`);
             const weatherJson = await weatherRes.json();
             const currentTemp = weatherJson.current?.temperature_2m ?? 24;
@@ -114,7 +208,7 @@ export const GeolocationWidget: React.FC = () => {
               formattedAddress: `${city}, ${state}`,
               weather: {
                 temp: currentTemp,
-                condition: currentTemp > 22 ? 'Sunny' : 'Mild',
+                condition: currentTemp > 22 ? 'Ensolarado' : 'Ameno',
                 humidity: currentHumidity
               }
             });
@@ -125,7 +219,6 @@ export const GeolocationWidget: React.FC = () => {
           }
         },
         async () => {
-          // Fallback para IP Geolocation em tempo real
           try {
             const ipRes = await fetch('http://ip-api.com/json/');
             const ipJson = await ipRes.json();
@@ -184,7 +277,7 @@ export const GeolocationWidget: React.FC = () => {
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ color: 'rgba(0, 240, 255, 0.7)' }}>MAP ENGINE:</span>
+          <span style={{ color: 'rgba(0, 240, 255, 0.7)' }}>RADAR ENGINE:</span>
           <span style={{ color: '#bce9ff', fontSize: '0.75rem' }}>Active Radar v1.2 (Live Stream)</span>
         </div>
       </div>

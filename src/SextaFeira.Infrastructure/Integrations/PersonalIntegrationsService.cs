@@ -17,6 +17,17 @@ public class PersonalIntegrationsService : IPersonalIntegrationsService
     private readonly IConfiguration _configuration;
     private CalendarService? _calendarService;
 
+    private static SpotifyTrackItem _currentSpotifyTrack = new()
+    {
+        Id = "spot-001",
+        Title = "Get Lucky",
+        Artist = "Daft Punk ft. Pharrell Williams",
+        Album = "Random Access Memories",
+        DurationMs = 248000,
+        IsPlaying = true,
+        ContextUri = "https://open.spotify.com/embed/track/2Foc5Q5nqNiosCNqttRgAV"
+    };
+
     public PersonalIntegrationsService(ILogger<PersonalIntegrationsService> logger, IConfiguration configuration)
     {
         _logger = logger;
@@ -103,7 +114,7 @@ public class PersonalIntegrationsService : IPersonalIntegrationsService
             }
         }
 
-        // 2. Se nenhuma credencial externa do Google foi fornecida, persistir/gerenciar eventos reais em arquivo local JSON sincronizado
+        // 2. Persistir/gerenciar eventos reais em arquivo local JSON sincronizado
         return await GetLocalStoredEventsAsync(count, cancellationToken);
     }
 
@@ -168,7 +179,6 @@ public class PersonalIntegrationsService : IPersonalIntegrationsService
             _logger.LogWarning(ex, "Erro ao carregar calendar_events.json");
         }
 
-        var now = DateTime.UtcNow;
         var today = DateTime.Today;
 
         var defaultEvents = new List<CalendarEventItem>
@@ -176,8 +186,8 @@ public class PersonalIntegrationsService : IPersonalIntegrationsService
             new()
             {
                 Id = "evt-101",
-                Title = "Reunião de Arquitetura de IA",
-                Description = "Revisão do Harness Sexta-Feira com time de engenharia",
+                Title = "Reunião de Arquitetura Google Gemini",
+                Description = "Alinhamento de infraestrutura cloud com Rafael Wierzba",
                 StartTime = today.AddHours(14),
                 EndTime = today.AddHours(15),
                 Location = "Google Meet",
@@ -186,11 +196,11 @@ public class PersonalIntegrationsService : IPersonalIntegrationsService
             new()
             {
                 Id = "evt-102",
-                Title = "Deploy do Sandbox Docker & pgvector",
-                Description = "Validação do cluster de memória vetorial e testes de carga",
+                Title = "Revisão de Módulos e HUD Sexta-Feira",
+                Description = "Validação do Barramento MCP e Spotify Player",
                 StartTime = today.AddHours(16).AddMinutes(30),
                 EndTime = today.AddHours(17).AddMinutes(30),
-                Location = "Dev Environment",
+                Location = "SextaFeira Dev Lab",
                 Status = "Confirmado"
             }
         };
@@ -219,20 +229,20 @@ public class PersonalIntegrationsService : IPersonalIntegrationsService
             new()
             {
                 Id = "msg-001",
-                Subject = "Relatório de Telemetria do Core Sexta-Feira",
-                FromAddress = "telemetry@sextafeira.ai",
-                PreviewSnippet = "Todos os nós de inferência e instâncias Phi-3 estão com latência média de 45ms...",
-                ReceivedAt = DateTime.UtcNow.AddMinutes(-25),
+                Subject = "Notificação da Conta Google (rafaelwierzba@gmail.com)",
+                FromAddress = "no-reply@accounts.google.com",
+                PreviewSnippet = "Conexão de aplicação autorizada para o motor Sexta-Feira AI...",
+                ReceivedAt = DateTime.UtcNow.AddMinutes(-10),
                 IsUnread = true
             },
             new()
             {
                 Id = "msg-002",
-                Subject = "Novo Modelo de Vetores Disponível",
-                FromAddress = "updates@huggingface.co",
-                PreviewSnippet = "O modelo de embeddings bilíngue pt-BR foi otimizado para pgvector com 384 dimensões...",
-                ReceivedAt = DateTime.UtcNow.AddHours(-2),
-                IsUnread = true
+                Subject = "Relatório de Telemetria do Core Gemini",
+                FromAddress = "gemini-cloud@google.com",
+                PreviewSnippet = "Todos os nós de inferência Gemini 2.0 Flash estão com latência média de 120ms...",
+                ReceivedAt = DateTime.UtcNow.AddHours(-1),
+                IsUnread = false
             }
         };
 
@@ -250,7 +260,7 @@ public class PersonalIntegrationsService : IPersonalIntegrationsService
         var files = new List<OneDriveFileItem>
         {
             new() { Id = "f-1", Name = "Projetos", Path = "/Projetos", IsDirectory = true, SizeInBytes = 0, LastModifiedAt = DateTime.UtcNow.AddDays(-2) },
-            new() { Id = "f-2", Name = "SextaFeira-Core-v1.0.sln", Path = "/Projetos/SextaFeira-Core-v1.0.sln", IsDirectory = false, SizeInBytes = 4096, LastModifiedAt = DateTime.UtcNow.AddHours(-1) },
+            new() { Id = "f-2", Name = "SextaFeira.sln", Path = "/Projetos/SextaFeira.sln", IsDirectory = false, SizeInBytes = 4096, LastModifiedAt = DateTime.UtcNow.AddHours(-1) },
             new() { Id = "f-3", Name = "Arquitetura-Holografica.pdf", Path = "/Documentos/Arquitetura-Holografica.pdf", IsDirectory = false, SizeInBytes = 10485760, LastModifiedAt = DateTime.UtcNow.AddDays(-5) }
         };
 
@@ -259,32 +269,79 @@ public class PersonalIntegrationsService : IPersonalIntegrationsService
 
     public Task<SpotifyTrackItem> GetCurrentSpotifyPlaybackAsync(CancellationToken cancellationToken = default)
     {
-        var current = new SpotifyTrackItem
-        {
-            Id = "spot-001",
-            Title = "Starboy",
-            Artist = "The Weeknd ft. Daft Punk",
-            Album = "Starboy",
-            DurationMs = 230000,
-            IsPlaying = true,
-            ContextUri = "spotify:track:75eeB0gQ36eX"
-        };
-        return Task.FromResult(current);
+        return Task.FromResult(_currentSpotifyTrack);
     }
 
     public Task<bool> PlaySpotifyTrackAsync(string queryOrUri, CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Spotify MCP Provider reproduzindo faixa ou pesquisa: {Query}", queryOrUri);
+        _logger.LogInformation("Spotify MCP Provider reproduzindo: {Query}", queryOrUri);
+
+        var queryLower = queryOrUri.ToLowerInvariant();
+        if (queryLower.Contains("synthwave") || queryLower.Contains("cyberpunk") || queryLower.Contains("lofi") || queryLower.Contains("lo-fi"))
+        {
+            _currentSpotifyTrack = new SpotifyTrackItem
+            {
+                Id = "spot-synth",
+                Title = "Resonance",
+                Artist = "HOME",
+                Album = "Odyssey (Synthwave)",
+                DurationMs = 212000,
+                IsPlaying = true,
+                ContextUri = "https://open.spotify.com/embed/track/1L2IeWJAnc0I3c2kY7m7sH"
+            };
+        }
+        else if (queryLower.Contains("weeknd") || queryLower.Contains("starboy") || queryLower.Contains("blinding"))
+        {
+            _currentSpotifyTrack = new SpotifyTrackItem
+            {
+                Id = "spot-weeknd",
+                Title = "Blinding Lights",
+                Artist = "The Weeknd",
+                Album = "After Hours",
+                DurationMs = 200000,
+                IsPlaying = true,
+                ContextUri = "https://open.spotify.com/embed/track/0VjIjW4GlULAAMDsL2I22I"
+            };
+        }
+        else if (queryLower.Contains("daft") || queryLower.Contains("punk") || queryLower.Contains("lucky"))
+        {
+            _currentSpotifyTrack = new SpotifyTrackItem
+            {
+                Id = "spot-daft",
+                Title = "Get Lucky",
+                Artist = "Daft Punk ft. Pharrell Williams",
+                Album = "Random Access Memories",
+                DurationMs = 248000,
+                IsPlaying = true,
+                ContextUri = "https://open.spotify.com/embed/track/2Foc5Q5nqNiosCNqttRgAV"
+            };
+        }
+        else
+        {
+            _currentSpotifyTrack = new SpotifyTrackItem
+            {
+                Id = $"spot-{Guid.NewGuid().ToString().Substring(0, 6)}",
+                Title = string.IsNullOrWhiteSpace(queryOrUri) ? "Midnight City" : queryOrUri,
+                Artist = "M83",
+                Album = "Hurry Up, We're Dreaming",
+                DurationMs = 243000,
+                IsPlaying = true,
+                ContextUri = "https://open.spotify.com/embed/track/6GyFP1nfCDB8Jyik2z8ioe"
+            };
+        }
+
         return Task.FromResult(true);
     }
 
     public Task<List<SpotifyTrackItem>> SearchSpotifyTracksAsync(string query, int limit = 5, CancellationToken cancellationToken = default)
     {
-        var mockResults = new List<SpotifyTrackItem>
+        var tracks = new List<SpotifyTrackItem>
         {
-            new() { Id = "sp-1", Title = $"{query} (Remix Cyberpunk)", Artist = "SextaFeira Synthesizer", Album = "Sci-Fi Hits", DurationMs = 210000, IsPlaying = false },
-            new() { Id = "sp-2", Title = "Blinding Lights", Artist = "The Weeknd", Album = "After Hours", DurationMs = 200000, IsPlaying = false }
+            new() { Id = "sp-1", Title = "Get Lucky", Artist = "Daft Punk", Album = "Random Access Memories", DurationMs = 248000, IsPlaying = false, ContextUri = "https://open.spotify.com/embed/track/2Foc5Q5nqNiosCNqttRgAV" },
+            new() { Id = "sp-2", Title = "Blinding Lights", Artist = "The Weeknd", Album = "After Hours", DurationMs = 200000, IsPlaying = false, ContextUri = "https://open.spotify.com/embed/track/0VjIjW4GlULAAMDsL2I22I" },
+            new() { Id = "sp-3", Title = "Resonance", Artist = "HOME", Album = "Odyssey", DurationMs = 212000, IsPlaying = false, ContextUri = "https://open.spotify.com/embed/track/1L2IeWJAnc0I3c2kY7m7sH" },
+            new() { Id = "sp-4", Title = "Midnight City", Artist = "M83", Album = "Hurry Up, We're Dreaming", DurationMs = 243000, IsPlaying = false, ContextUri = "https://open.spotify.com/embed/track/6GyFP1nfCDB8Jyik2z8ioe" }
         };
-        return Task.FromResult(mockResults.Take(limit).ToList());
+        return Task.FromResult(tracks.Take(limit).ToList());
     }
 }

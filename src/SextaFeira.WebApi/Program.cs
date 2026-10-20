@@ -44,14 +44,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString, o => o.UseVector());
 });
 
-// Provedores de LLM
+// Provedores de LLM (Prioridade: Google Gemini Cloud Oficial -> Ollama Local Fallback)
+builder.Services.AddSingleton<ILLMProvider, GoogleGeminiCloudProvider>();
 builder.Services.AddSingleton<ILLMProvider, OllamaLocalFallbackProvider>();
-builder.Services.AddSingleton<ILLMProvider>(sp => new GenericCloudLLMProvider(
-    LLMProviderType.GoogleGemini, 
-    "gemini-2.0-flash", 
-    sp.GetRequiredService<HttpClient>(), 
-    sp.GetRequiredService<IConfiguration>(), 
-    sp.GetRequiredService<ILogger<GenericCloudLLMProvider>>()));
 builder.Services.AddSingleton<ILLMProvider>(sp => new GenericCloudLLMProvider(
     LLMProviderType.OpenAI, 
     "gpt-4o", 

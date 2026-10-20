@@ -16,15 +16,18 @@ public class CoreController : ControllerBase
     private readonly CognitiveOrchestrator _orchestrator;
     private readonly IHubContext<HudTelemetryHub, IHudTelemetryClient> _telemetryHub;
     private readonly IVoiceEngine _voiceEngine;
+    private readonly IConfiguration _configuration;
 
     public CoreController(
         CognitiveOrchestrator orchestrator,
         IHubContext<HudTelemetryHub, IHudTelemetryClient> telemetryHub,
-        IVoiceEngine voiceEngine)
+        IVoiceEngine voiceEngine,
+        IConfiguration configuration)
     {
         _orchestrator = orchestrator;
         _telemetryHub = telemetryHub;
         _voiceEngine = voiceEngine;
+        _configuration = configuration;
     }
 
     [HttpPost("process")]
@@ -51,20 +54,39 @@ public class CoreController : ControllerBase
     [HttpGet("status")]
     public IActionResult GetSystemStatus()
     {
+        var geminiKey = _configuration["LLM:GoogleGemini:ApiKey"] ?? Environment.GetEnvironmentVariable("GEMINI_API_KEY") ?? "";
+        var hasGemini = !string.IsNullOrWhiteSpace(geminiKey);
+
         var status = new
         {
             Core = "Sexta-Feira AI v1.0.0",
-            ActiveModel = "Phi-3 Mini (Local) / Claude 3.5 / GPT-4o",
-            FallbackStatus = "Ready (Ollama/ONNX Fallback Ativo)",
+            ActiveModel = hasGemini ? "Google Gemini 2.0 Flash (Cloud Ultra-Fast)" : "Google Gemini 2.0 / Phi-3 Mini (Local Engine)",
+            UserAccount = "rafaelwierzba@gmail.com",
+            HasGeminiKey = hasGemini,
+            FallbackStatus = "Ready (Google Gemini Cloud + Fallback Autônomo)",
             MCPOrchestrator = "Connected (8 Ferramentas Registradas)",
-            CpuUsage = $"{Random.Shared.Next(12, 28)}%",
-            MemoryUsage = $"{Random.Shared.Next(35, 48)}%",
+            CpuUsage = $"{Random.Shared.Next(8, 18)}%",
+            MemoryUsage = $"{Random.Shared.Next(25, 38)}%",
             VectorMemoryCount = 42,
             Timestamp = DateTime.UtcNow
         };
         return Ok(status);
     }
+
+    [HttpPost("config/gemini-key")]
+    public IActionResult SetGeminiKey([FromBody] SetApiKeyRequest request)
+    {
+        if (!string.IsNullOrWhiteSpace(request.ApiKey))
+        {
+            Environment.SetEnvironmentVariable("GEMINI_API_KEY", request.ApiKey.Trim());
+            Environment.SetEnvironmentVariable("GOOGLE_API_KEY", request.ApiKey.Trim());
+            return Ok(new { success = true, message = "Chave da API do Google Gemini configurada com sucesso para a conta rafaelwierzba@gmail.com!" });
+        }
+        return BadRequest(new { error = "Chave de API inválida." });
+    }
 }
+
+public record SetApiKeyRequest(string ApiKey);
 
 [ApiController]
 [Route("api/[controller]")]
@@ -151,6 +173,13 @@ public class PersonalController : ControllerBase
         return Ok(events);
     }
 
+    [HttpPost("calendar")]
+    public async Task<IActionResult> CreateCalendarEvent([FromBody] CalendarEventItem eventItem, CancellationToken cancellationToken)
+    {
+        var created = await _personalService.CreateCalendarEventAsync(eventItem, cancellationToken);
+        return Ok(created);
+    }
+
     [HttpGet("emails")]
     public async Task<IActionResult> GetEmails(CancellationToken cancellationToken)
     {
@@ -164,7 +193,31 @@ public class PersonalController : ControllerBase
         var files = await _personalService.GetOneDriveFilesAsync("/", cancellationToken);
         return Ok(files);
     }
+
+    [HttpGet("spotify")]
+    public async Task<IActionResult> GetSpotifyCurrent(CancellationToken cancellationToken)
+    {
+        var track = await _personalService.GetCurrentSpotifyPlaybackAsync(cancellationToken);
+        return Ok(track);
+    }
+
+    [HttpPost("spotify/play")]
+    public async Task<IActionResult> PlaySpotify([FromBody] SpotifyPlayRequest request, CancellationToken cancellationToken)
+    {
+        var success = await _personalService.PlaySpotifyTrackAsync(request.Query ?? "Daft Punk", cancellationToken);
+        var track = await _personalService.GetCurrentSpotifyPlaybackAsync(cancellationToken);
+        return Ok(new { success, currentTrack = track });
+    }
+
+    [HttpGet("spotify/search")]
+    public async Task<IActionResult> SearchSpotify([FromQuery] string query, CancellationToken cancellationToken)
+    {
+        var results = await _personalService.SearchSpotifyTracksAsync(query ?? "Synthwave", 5, cancellationToken);
+        return Ok(results);
+    }
 }
+
+public record SpotifyPlayRequest(string? Query);
 
 [ApiController]
 [Route("api/[controller]")]
@@ -242,4 +295,3 @@ public class MemoryController : ControllerBase
         return Ok(new { RecycledCount = count, Status = "Memory recycling completed." });
     }
 }
-
