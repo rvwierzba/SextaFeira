@@ -30,6 +30,7 @@ public class CognitiveOrchestrator
     private readonly IMemoryStore _memoryStore;
     private readonly IMcpHost _mcpHost;
     private readonly IVoiceEngine _voiceEngine;
+    private readonly IAiConnectionManager? _aiConnectionManager;
     private readonly ILogger<CognitiveOrchestrator> _logger;
 
     private static readonly Dictionary<Guid, ConversationSession> _sessionCache = new();
@@ -39,13 +40,15 @@ public class CognitiveOrchestrator
         IMemoryStore memoryStore,
         IMcpHost mcpHost,
         IVoiceEngine voiceEngine,
-        ILogger<CognitiveOrchestrator> logger)
+        ILogger<CognitiveOrchestrator> logger,
+        IAiConnectionManager? aiConnectionManager = null)
     {
         _llmProviders = llmProviders;
         _memoryStore = memoryStore;
         _mcpHost = mcpHost;
         _voiceEngine = voiceEngine;
         _logger = logger;
+        _aiConnectionManager = aiConnectionManager;
     }
 
     public async Task<ProcessUserInputResponse> ProcessInputAsync(
@@ -95,6 +98,39 @@ public class CognitiveOrchestrator
         // 4. Obter ferramentas registradas
         var availableTools = await _mcpHost.GetAvailableToolsAsync(cancellationToken);
 
+        var effectiveProvider = request.PreferredProvider;
+        if (!effectiveProvider.HasValue && _aiConnectionManager != null)
+        {
+            effectiveProvider = await _aiConnectionManager.GetActiveProviderTypeAsync(cancellationToken);
+        }
+
+        // Detecção de comando de voz para troca dinâmica do cérebro de IA
+        var lowerInput = request.UserInput.ToLowerInvariant();
+        if (lowerInput.Contains("usar claude") || lowerInput.Contains("mudar para o claude") || lowerInput.Contains("mude para o claude") || lowerInput.Contains("ativar claude") || lowerInput.Contains("trocar para claude"))
+        {
+            if (_aiConnectionManager != null)
+            {
+                await _aiConnectionManager.SetActiveProviderAsync(LLMProviderType.Anthropic, cancellationToken);
+                effectiveProvider = LLMProviderType.Anthropic;
+            }
+        }
+        else if (lowerInput.Contains("usar openai") || lowerInput.Contains("usar chatgpt") || lowerInput.Contains("mudar para o gpt") || lowerInput.Contains("mude para o gpt") || lowerInput.Contains("ativar gpt") || lowerInput.Contains("trocar para chatgpt"))
+        {
+            if (_aiConnectionManager != null)
+            {
+                await _aiConnectionManager.SetActiveProviderAsync(LLMProviderType.OpenAI, cancellationToken);
+                effectiveProvider = LLMProviderType.OpenAI;
+            }
+        }
+        else if (lowerInput.Contains("usar gemini") || lowerInput.Contains("mudar para o gemini") || lowerInput.Contains("mude para o gemini") || lowerInput.Contains("ativar gemini") || lowerInput.Contains("trocar para gemini"))
+        {
+            if (_aiConnectionManager != null)
+            {
+                await _aiConnectionManager.SetActiveProviderAsync(LLMProviderType.GoogleGemini, cancellationToken);
+                effectiveProvider = LLMProviderType.GoogleGemini;
+            }
+        }
+
         var llmRequest = new LLMRequest(
             Prompt: request.UserInput,
             SystemPrompt: systemPrompt,
@@ -103,7 +139,7 @@ public class CognitiveOrchestrator
         );
 
         // 5. Selecionar Provedor com Fallback Inteligente
-        var (provider, response) = await ExecuteWithFallbackAsync(request.PreferredProvider, llmRequest, cancellationToken);
+        var (provider, response) = await ExecuteWithFallbackAsync(effectiveProvider, llmRequest, cancellationToken);
 
         var executedTools = new List<ToolExecutionResult>();
 

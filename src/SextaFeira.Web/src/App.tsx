@@ -3,14 +3,18 @@ import { HologramCoreCanvas, AgentVisualState } from './components/3d/HologramCo
 import { ModelCoreWidget, GeolocationWidget } from './components/hud/ModelCoreAndGeoWidgets';
 import { NetworkMapWidget, PersonalServicesWidget } from './components/hud/NetworkAndPersonalWidgets';
 import { SandboxConsoleWidget, AudioVisualizerWidget, HudStatusBar } from './components/hud/ConsoleAndStatusWidgets';
+import { AiAccountManagerModal } from './components/hud/AiAccountManagerModal';
 import { useVoiceEngine } from './hooks/useVoiceEngine';
 
 export const App: React.FC = () => {
   const [agentState, setAgentState] = useState<AgentVisualState>('IDLE');
   const [statusMessage, setStatusMessage] = useState<string>('AGUARDANDO COMANDO DE VOZ OU TEXTO...');
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [activeBrainName, setActiveBrainName] = useState('Google Gemini 2.0 Flash');
   const [consoleLogs, setConsoleLogs] = useState<string[]>([
     '[INIT] Sexta-Feira AI Core v1.0.0 inicializado com sucesso.',
     '[GOOGLE] Conectado à conta rafaelwierzba@gmail.com via Gemini 2.0 Flash.',
+    '[AI HUB] Hub multi-provedor pronto (Google Gemini, OpenAI GPT-4o, Anthropic Claude).',
     '[MCP] 8 ferramentas ativas (Google Calendar, Gmail, Network, Spotify, Stealth).',
     '[MEMORY] pgvector cluster conectado (memória de longo prazo pronta).'
   ]);
@@ -18,7 +22,7 @@ export const App: React.FC = () => {
 
   const handleCommandDetected = async (command: string) => {
     setAgentState('THINKING');
-    setStatusMessage(`Processando no Google Gemini: "${command}"...`);
+    setStatusMessage(`Processando no cérebro ativo (${activeBrainName}): "${command}"...`);
     addConsoleLog(`[COMMAND] Recebido: "${command}"`);
 
     try {
@@ -30,8 +34,7 @@ export const App: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userInput: command,
-          enableVoiceOutput: true,
-          preferredProvider: 4 // GoogleGemini
+          enableVoiceOutput: true
         }),
         signal: controller.signal
       }).catch((e) => {
@@ -211,7 +214,7 @@ export const App: React.FC = () => {
 
         {/* Top Center: Model Core Status */}
         <div style={{ pointerEvents: 'auto', display: 'flex', justifyContent: 'center' }}>
-          <ModelCoreWidget />
+          <ModelCoreWidget onOpenAiAccountsModal={() => setIsAiModalOpen(true)} />
         </div>
 
         {/* Top Right: Personal Services (Calendar, Gmail, Spotify, OneDrive) */}
@@ -255,6 +258,17 @@ export const App: React.FC = () => {
         isListening={isListening}
         onToggleVoice={toggleVoice}
         onSendTextMessage={handleCommandDetected}
+      />
+
+      {/* Neural AI Accounts Modal */}
+      <AiAccountManagerModal
+        isOpen={isAiModalOpen}
+        onClose={() => setIsAiModalOpen(false)}
+        onProviderChanged={(p) => {
+          setActiveBrainName(p);
+          addConsoleLog(`[AI CORE] Cérebro ativo atualizado para ${p}.`);
+        }}
+        onLogMessage={addConsoleLog}
       />
     </div>
   );

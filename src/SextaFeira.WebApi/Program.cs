@@ -44,21 +44,14 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString, o => o.UseVector());
 });
 
-// Provedores de LLM (Prioridade: Google Gemini Cloud Oficial -> Ollama Local Fallback)
+// Gerenciador de Contas e Conexões de IA (Google, OpenAI, Anthropic)
+builder.Services.AddSingleton<IAiConnectionManager, AiConnectionManager>();
+
+// Provedores Oficiais de Nuvem de Alta Velocidade (Gemini 2.0 Flash, GPT-4o, Claude 3.5 Sonnet)
 builder.Services.AddSingleton<ILLMProvider, GoogleGeminiCloudProvider>();
+builder.Services.AddSingleton<ILLMProvider, OpenAiGptCloudProvider>();
+builder.Services.AddSingleton<ILLMProvider, AnthropicClaudeCloudProvider>();
 builder.Services.AddSingleton<ILLMProvider, OllamaLocalFallbackProvider>();
-builder.Services.AddSingleton<ILLMProvider>(sp => new GenericCloudLLMProvider(
-    LLMProviderType.OpenAI, 
-    "gpt-4o", 
-    sp.GetRequiredService<HttpClient>(), 
-    sp.GetRequiredService<IConfiguration>(), 
-    sp.GetRequiredService<ILogger<GenericCloudLLMProvider>>()));
-builder.Services.AddSingleton<ILLMProvider>(sp => new GenericCloudLLMProvider(
-    LLMProviderType.Anthropic, 
-    "claude-3-5-sonnet", 
-    sp.GetRequiredService<HttpClient>(), 
-    sp.GetRequiredService<IConfiguration>(), 
-    sp.GetRequiredService<ILogger<GenericCloudLLMProvider>>()));
 
 // Serviços de Infraestrutura e Domínio
 builder.Services.AddScoped<IMemoryStore, PgVectorMemoryStore>();

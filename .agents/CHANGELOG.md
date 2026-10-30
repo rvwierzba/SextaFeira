@@ -1,5 +1,21 @@
 # 📜 CHANGELOG — Sexta-Feira
 
+## [v1.2.0] - 2026-10-30
+
+### 🚀 Novas Funcionalidades
+- **Hub Multi-Provedor de IA em Nuvem (Zero-Setup & Intuitivo):**
+  - Descontinuação do modelo local lento como default; migração definitiva para provedores cloud de ultra-baixa latência: **Google Gemini 2.0 Flash**, **OpenAI GPT-4o** e **Anthropic Claude 3.5 Sonnet**.
+  - Criação de `IAiConnectionManager` e `AiConnectionManager` com cofre persistente de credenciais (`ai_connections_vault.json`).
+  - Implementação oficial de `OpenAiGptCloudProvider` e `AnthropicClaudeCloudProvider` com suporte a Function Calling (MCP) e streaming.
+  - Atualização do `GoogleGeminiCloudProvider` para ler tokens do cofre e suportar autenticação OAuth.
+  - Adicionado `AiConnectionsController` com rotas para listagem, login Google OAuth 1-clique, smart connect, troca de provedor e teste de ping em tempo real.
+- **Troca de Cérebro por Comando de Voz:**
+  - O `CognitiveOrchestrator` agora detecta intenções naturais de troca de IA por voz (*"Sexta-Feira, use o Claude"*, *"ativar GPT"*, *"trocar para o Gemini"*), alternando o núcleo ativo a quente e notificando o HUD via SignalR.
+- **Interface Holográfica de Gerenciamento de IA no HUD React:**
+  - Criado o modal `AiAccountManagerModal` no padrão visual sci-fi HUD da Sexta-Feira.
+  - Conexão em 1-clique via Google OAuth, atalhos rápidos com validação em tempo real e botões de teste de latência (ping em ms).
+  - Atualizado o card `ModelCoreWidget` com o botão de acesso rápido às contas de IA e telemetria do cérebro ativo.
+
 ## [v1.1.0] - 2026-09-30
 
 ### 🚀 Novas Funcionalidades

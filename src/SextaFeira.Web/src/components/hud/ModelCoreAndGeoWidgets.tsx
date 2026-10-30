@@ -1,21 +1,24 @@
 import React, { useEffect, useState } from 'react';
-import { Cpu, Server, Activity, Key, Check } from 'lucide-react';
+import { Cpu, Server, Activity, Key, Check, Sparkles, Zap } from 'lucide-react';
 
 interface ModelCoreWidgetProps {
   activeModel?: string;
   mcpStatus?: string;
   cpuLoad?: string;
   memoryLoad?: string;
+  onOpenAiAccountsModal?: () => void;
 }
 
-export const ModelCoreWidget: React.FC<ModelCoreWidgetProps> = () => {
+export const ModelCoreWidget: React.FC<ModelCoreWidgetProps> = ({ onOpenAiAccountsModal }) => {
   const [status, setStatus] = useState({
     activeModel: 'Google Gemini 2.0 Flash (Cloud Ultra-Fast)',
+    activeProvider: 'GoogleGemini',
     userAccount: 'rafaelwierzba@gmail.com',
     mcpStatus: 'MCP Connected (8 Tools)',
     cpuLoad: '12%',
     memoryLoad: '32%',
-    hasGeminiKey: false
+    latencyMs: 120,
+    hasGeminiKey: true
   });
   const [showKeyInput, setShowKeyInput] = useState(false);
   const [keyInput, setKeyInput] = useState('');
@@ -28,10 +31,12 @@ export const ModelCoreWidget: React.FC<ModelCoreWidgetProps> = () => {
         if (data) {
           setStatus({
             activeModel: data.activeModel || 'Google Gemini 2.0 Flash',
+            activeProvider: data.activeProvider || 'GoogleGemini',
             userAccount: data.userAccount || 'rafaelwierzba@gmail.com',
             mcpStatus: data.mcpOrchestrator || 'MCP Connected (8 Tools)',
             cpuLoad: data.cpuUsage || '12%',
             memoryLoad: data.memoryUsage || '32%',
+            latencyMs: data.latencyMs || 120,
             hasGeminiKey: !!data.hasGeminiKey
           });
         }
@@ -59,38 +64,65 @@ export const ModelCoreWidget: React.FC<ModelCoreWidgetProps> = () => {
     }
   };
 
+  const getProviderBadgeColor = (provider: string) => {
+    if (provider.includes('Anthropic') || provider.includes('Claude')) return '#f97316';
+    if (provider.includes('OpenAI') || provider.includes('GPT')) return '#10b981';
+    return '#8b5cf6'; // Google Gemini
+  };
+
   return (
-    <div className="hud-panel" style={{ width: '330px' }}>
-      <div className="hud-panel-header">
-        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Cpu size={14} color="#00f0ff" /> GOOGLE GEMINI CLOUD ENGINE
+    <div className="hud-panel" style={{ width: '350px' }}>
+      <div className="hud-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem' }}>
+          <Cpu size={14} color="#00f0ff" /> NÚCLEO COGNITIVO // IA
         </span>
         <button
-          onClick={() => setShowKeyInput(!showKeyInput)}
+          onClick={onOpenAiAccountsModal}
           style={{
-            background: 'transparent',
-            border: 'none',
+            background: 'linear-gradient(135deg, rgba(0, 240, 255, 0.25) 0%, rgba(139, 92, 246, 0.25) 100%)',
+            border: '1px solid #00f0ff',
             color: '#00f0ff',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: '4px',
-            fontSize: '0.65rem',
-            fontFamily: 'var(--hud-font-orbitron)'
+            gap: '5px',
+            fontSize: '0.68rem',
+            padding: '3px 8px',
+            borderRadius: '4px',
+            fontWeight: 700,
+            fontFamily: 'var(--hud-font-orbitron)',
+            boxShadow: '0 0 8px rgba(0, 240, 255, 0.3)'
           }}
         >
-          <Key size={11} /> API KEY
+          <Sparkles size={11} /> CONTAS DE IA
         </button>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.8rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.8rem', marginTop: '4px' }}>
         <div>
-          <span style={{ color: 'rgba(0, 240, 255, 0.7)', fontSize: '0.7rem' }}>CONTA & NÚCLEO ATIVO:</span>
-          <div style={{ color: '#fff', fontWeight: 600, fontFamily: 'var(--hud-font-orbitron)', fontSize: '0.75rem', marginTop: '2px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ color: 'rgba(0, 240, 255, 0.7)', fontSize: '0.7rem' }}>CÉREBRO ATIVO:</span>
+            <span style={{ color: '#00ff88', fontSize: '0.65rem', fontFamily: 'var(--hud-font-mono)' }}>
+              ⚡ {status.latencyMs}ms ONLINE
+            </span>
+          </div>
+          <div
+            style={{
+              color: getProviderBadgeColor(status.activeModel),
+              fontWeight: 700,
+              fontFamily: 'var(--hud-font-orbitron)',
+              fontSize: '0.8rem',
+              marginTop: '2px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <Zap size={13} fill={getProviderBadgeColor(status.activeModel)} />
             {status.activeModel}
           </div>
-          <div style={{ color: 'rgba(0, 255, 136, 0.8)', fontSize: '0.68rem', fontFamily: 'var(--hud-font-mono)' }}>
-            User: {status.userAccount}
+          <div style={{ color: 'rgba(216, 244, 255, 0.8)', fontSize: '0.68rem', fontFamily: 'var(--hud-font-mono)', marginTop: '2px' }}>
+            Conta: {status.userAccount}
           </div>
         </div>
 

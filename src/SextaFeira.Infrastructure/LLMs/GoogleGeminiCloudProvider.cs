@@ -17,6 +17,7 @@ public class GoogleGeminiCloudProvider : ILLMProvider
 {
     private readonly HttpClient _httpClient;
     private readonly IConfiguration _configuration;
+    private readonly IAiConnectionManager? _connectionManager;
     private readonly ILogger<GoogleGeminiCloudProvider> _logger;
 
     public LLMProviderType ProviderType => LLMProviderType.GoogleGemini;
@@ -26,17 +27,20 @@ public class GoogleGeminiCloudProvider : ILLMProvider
         HttpClient httpClient,
         IConfiguration configuration,
         ILogger<GoogleGeminiCloudProvider> logger,
+        IAiConnectionManager? connectionManager = null,
         string modelName = "gemini-2.0-flash")
     {
         _httpClient = httpClient;
         _configuration = configuration;
         _logger = logger;
+        _connectionManager = connectionManager;
         DefaultModelName = modelName;
     }
 
     private string? GetApiKey()
     {
-        var key = _configuration["LLM:GoogleGemini:ApiKey"];
+        var key = _connectionManager?.GetCredentialAsync(LLMProviderType.GoogleGemini).GetAwaiter().GetResult();
+        if (string.IsNullOrWhiteSpace(key)) key = _configuration["LLM:GoogleGemini:ApiKey"];
         if (string.IsNullOrWhiteSpace(key)) key = _configuration["GEMINI_API_KEY"];
         if (string.IsNullOrWhiteSpace(key)) key = Environment.GetEnvironmentVariable("GEMINI_API_KEY");
         if (string.IsNullOrWhiteSpace(key)) key = Environment.GetEnvironmentVariable("GOOGLE_API_KEY");
