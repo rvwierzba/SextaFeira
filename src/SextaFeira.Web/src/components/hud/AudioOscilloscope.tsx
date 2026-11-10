@@ -149,3 +149,4 @@ export const AudioOscilloscope: React.FC<AudioOscilloscopeProps> = ({
     </div>
   );
 };
+

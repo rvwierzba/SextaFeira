@@ -82,3 +82,4 @@ public class OpenJarvisController : ControllerBase
         return Ok(new { Success = true, ActiveMode = request.Mode });
     }
 }
+

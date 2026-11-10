@@ -54,3 +54,4 @@ public interface IOpenJarvisEngine
     /// </summary>
     Task SetActiveModeAsync(string mode, CancellationToken cancellationToken = default);
 }
+

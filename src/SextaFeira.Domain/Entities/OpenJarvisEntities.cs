@@ -74,3 +74,4 @@ public record OpenJarvisSystemStatus(
     double IntelligencePerWattIndex,
     List<OpenJarvisTrace> RecentTraces
 );
+

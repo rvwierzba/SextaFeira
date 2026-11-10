@@ -217,3 +217,4 @@ export const HolographicSubtitles: React.FC<HolographicSubtitlesProps> = ({
     </div>
   );
 };
+
