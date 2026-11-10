@@ -1,473 +1,110 @@
-<p align="center">
-  <img src="docs/assets/logo-placeholder.svg" width="120" alt="Sexta-Feira Logo"/>
-  <br/>
-  <strong>🧠 SEXTA-FEIRA (F.R.I.D.A.Y.) v2.0</strong>
-  <br/>
-  <em>Harness de IA Autônoma Multimodal · Stanford OpenJarvis Local Engine & HUD Fluido Cinemático</em>
-</p>
+# Sexta-Feira
 
-<p align="center">
-  <img src="https://img.shields.io/badge/version-2.0.0-blue?style=for-the-badge" alt="Version"/>
-  <img src="https://img.shields.io/badge/OpenJarvis-Stanford_SAIL-00f0ff?style=for-the-badge" alt="Stanford OpenJarvis"/>
-  <img src="https://img.shields.io/badge/.NET-10.0-purple?style=for-the-badge&logo=dotnet" alt=".NET 10"/>
-  <img src="https://img.shields.io/badge/React-18+-61DAFB?style=for-the-badge&logo=react" alt="React"/>
-  <img src="https://img.shields.io/badge/Three.js-WebGL_Shaders-black?style=for-the-badge&logo=threedotjs" alt="Three.js"/>
-  <img src="https://img.shields.io/badge/PostgreSQL-pgvector-336791?style=for-the-badge&logo=postgresql" alt="PostgreSQL"/>
-  <img src="https://img.shields.io/badge/Docker-Container-2496ED?style=for-the-badge&logo=docker" alt="Docker"/>
-  <img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="License"/>
-</p>
+Assistente pessoal por voz, inspirada na F.R.I.D.A.Y. dos filmes do Homem de Ferro. Roda **local por padrão** (Ollama + Whisper na sua GPU), aceita seu LLM favorito quando você quiser (Claude, ChatGPT ou Gemini), conecta em serviços por **MCP**, edita o próprio código e escuta pelo microfone de **qualquer dispositivo da sua rede**.
 
----
-
-## 📖 Sumário
-
-- [Visão Geral](#-visão-geral)
-- [Arquitetura](#-arquitetura)
-- [Stack Tecnológica](#-stack-tecnológica)
-- [Funcionalidades Principais](#-funcionalidades-principais)
-- [Estrutura do Projeto](#-estrutura-do-projeto)
-- [Pré-Requisitos](#-pré-requisitos)
-- [Instalação e Setup](#-instalação-e-setup)
-- [Execução Local](#-execução-local)
-- [Variáveis de Ambiente](#-variáveis-de-ambiente)
-- [API Endpoints](#-api-endpoints)
-- [Integrações de Serviços (OAuth)](#-integrações-de-serviços-oauth)
-- [Auto-Evolução do Código](#-auto-evolução-do-código)
-- [Documentação do Agente (.agents)](#-documentação-do-agente-agents)
-- [Roadmap](#-roadmap)
-- [Contribuição](#-contribuição)
-- [Licença](#-licença)
-
----
-
-## 🌟 Visão Geral
-
-**Sexta-Feira** é um Harness de Inteligência Artificial autônomo, multimodal e cross-platform, inspirado na assistente F.R.I.D.A.Y. do universo Marvel. O sistema opera como um **PWA com interface HUD Sci-Fi holográfica**, com interação prioritária por **voz em Português do Brasil (PT-BR)** e capacidade de agir no mundo real através de **agentes autônomos** e integração via **Model Context Protocol (MCP)**.
-
-### Filosofia Central
-
-- **Desacoplado de LLMs específicas** — Suporte a múltiplos provedores (Ollama local, OpenAI, Anthropic, Google Gemini, Groq) com fallback inteligente automático
-- **Zero-Trust Execution** — Todo código gerado pela IA é executado em containers Docker isolados
-- **Memória de Longo Prazo** — PostgreSQL + pgvector para busca semântica vetorial com reciclagem automática de contexto
-- **Self-Healing & Auto-Evolução** — Motor de auto-correção que refatora erros e altera o próprio código C#/.NET em tempo de execução com validação `dotnet build`
-- **Voz-First Multilíngue** — Interação reativa por voz com detecção de wake-words em múltiplos idiomas (`"Ei, Sexta feira"`, `"Hey Friday"`, `"Oye Sexta feira"`)
-
----
-
-## 🏗 Arquitetura
-
-O projeto segue **Clean Architecture + Domain-Driven Design (DDD)**, garantindo separação clara de responsabilidades:
+## Como funciona
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    🖥️ FRONTEND (HUD)                        │
-│         React + Three.js/WebGL + SignalR Client             │
-│         Esfera Holográfica · Voz · Painel de Controle       │
-└───────────────────────┬─────────────────────────────────────┘
-                        │ REST API + WebSocket (SignalR)
-┌───────────────────────▼─────────────────────────────────────┐
-│                  📡 WEB API (ASP.NET Core)                   │
-│         Controllers · Hubs · Middleware · CORS              │
-└───────────────────────┬─────────────────────────────────────┘
-                        │
-┌───────────────────────▼─────────────────────────────────────┐
-│               🧠 APPLICATION (Orchestrators)                 │
-│   CognitiveOrchestrator · SelfHealingEngine                 │
-│   MemoryRecyclerService · Use Cases                         │
-└───────┬───────────────────────────────────┬─────────────────┘
-        │                                   │
-┌───────▼───────────┐             ┌─────────▼─────────────────┐
-│  📐 DOMAIN        │             │  🔌 INFRASTRUCTURE         │
-│  Entities         │◄────────────│  LLM Providers (5+)       │
-│  Interfaces       │             │  MCP Server Registry      │
-│  Enums            │             │  PostgreSQL + pgvector     │
-│  Value Objects    │             │  Docker Sandbox            │
-│                   │             │  Playwright Stealth        │
-│                   │             │  Network Scanner           │
-│                   │             │  Voice Engine (STT/TTS)    │
-│                   │             │  Geolocation (GPS/IP)      │
-│                   │             │  OAuth Service Connectors  │
-└───────────────────┘             └─────────────────────────────┘
+ Celular / tablet / PC (navegador)                 Computador principal
+ ┌──────────────────────────────┐   SignalR    ┌────────────────────────────────────────┐
+ │ Microfone → VAD → PCM 16 kHz │ ───────────▶ │ Whisper local (GPU) → palavra de        │
+ │                              │              │ ativação → agente (loop de ferramentas) │
+ │ Voz do sistema ◀── frases ◀──│ ◀─────────── │ ← LLM em streaming: Ollama | Claude |   │
+ │ HUD 3D + legendas            │              │   ChatGPT | Gemini  + MCP + memória      │
+ └──────────────────────────────┘              └────────────────────────────────────────┘
 ```
 
-### Fluxo de Dependências
-```
-WebApi → Application → Domain ← Infrastructure
-```
+1. O navegador detecta quando você começa e termina de falar e manda só a fala (PCM 16 kHz) para o núcleo.
+2. O Whisper transcreve localmente. Se a frase começa com "Sexta-Feira" (ou chega logo depois de uma resposta), vira um pedido.
+3. O agente conversa com o LLM em streaming, executa ferramentas de verdade (clima, busca, memória, MCP, código), devolve os resultados ao modelo e repete até ter a resposta.
+4. Cada frase pronta já é falada no aparelho que perguntou, sem esperar o fim da resposta. Falar por cima interrompe.
 
----
+## Começando
 
-## 🔧 Stack Tecnológica
+Pré-requisitos: **.NET 10 SDK**, **Node.js**, **Ollama** e uma GPU com Vulkan (opcional, mas recomendada).
 
-| Camada | Tecnologia | Versão |
-|--------|-----------|--------|
-| **Backend** | C# / .NET | 10.0 |
-| **API** | ASP.NET Core | 10.0 |
-| **Realtime** | SignalR Core | 10.0 |
-| **Frontend** | React + TypeScript | 18+ |
-| **3D/WebGL** | Three.js | Latest |
-| **Database** | PostgreSQL + pgvector | 16 + 0.5 |
-| **ORM** | Entity Framework Core | 9.0 |
-| **LLM Local** | Ollama (Phi-3 Mini) | Latest |
-| **LLM Cloud** | OpenAI, Anthropic, Google Gemini, Groq | Latest |
-| **Containerização** | Docker + Docker Compose | 24+ |
-| **Web Scraping** | Playwright Stealth | Latest |
-| **Voz STT** | Whisper API | Latest |
-| **Voz TTS** | Azure Cognitive (pt-BR-FranciscaNeural) | Latest |
-| **Build Frontend** | Vite | Latest |
-
----
-
-## ⚡ Funcionalidades Principais
-
-### 🧠 Core de IA & Auto-Evolução
-- **Multi-Provider LLM** com fallback automático (Local → Cloud → Contingência)
-- **RAG (Retrieval-Augmented Generation)** com memória vetorial pgvector
-- **Tool Calling** nativo com dispatch via MCP (13 ferramentas ativas)
-- **Self-Healing Engine** — Ciclo de debug-fix-retry automático em Docker Sandbox
-- **Self-Evolution Engine** — Protocolo de auto-desenvolvimento e alteração de código C#/.NET em tempo de execução com compilação `dotnet build`
-
-### 🎙️ Voz Multilíngue
-- **Wake Word Detection Multilíngue** (`"Ei, Sexta feira"`, `"Hey Friday"`, `"Oye Sexta feira"`)
-- **Speech-to-Text (STT)** — Whisper / Web Speech API (PT-BR, EN, ES, FR)
-- **Text-to-Speech (TTS)** — Azure Cognitive / SpeechSynthesis
-- **Streaming de áudio** bidirecional via SignalR
-
-### 🌐 Agentes & Ferramentas MCP (13 Ativas)
-| Ferramenta | Descrição |
-|-----------|-----------|
-| `network_scan` | Scanner de rede local (Wi-Fi/Ethernet) |
-| `stealth_search` | Busca web furtiva com evasão anti-bot |
-| `stealth_extract_url` | Extração de conteúdo de páginas web |
-| `docker_execute_code` | Execução isolada de código em Docker |
-| `calendar_get_upcoming` | Próximos eventos do Google Calendar |
-| `email_get_recent` | E-mails recentes (Gmail/Outlook) |
-| `google_gmail_send` | Envio de e-mails formatados via conector Google/Gmail |
-| `spotify_get_current` | Status e música atual em reprodução no Spotify |
-| `spotify_play` | Reprodução de faixas e playlists no Spotify |
-| `spotify_search` | Pesquisa de músicas e artistas no Spotify |
-| `onedrive_list_files` | Arquivos do OneDrive |
-| `get_geolocation_weather` | Geolocalização + clima em tempo real |
-| `self_evolve_codebase` | Auto-modificação e compilação do próprio código em C# |
-
-### 🎨 Interface HUD Sci-Fi
-- **Esfera Holográfica** reativa (Three.js/WebGL) que pulsa conforme o estado do agente
-- **Painel de telemetria** em tempo real via SignalR
-- **Console Sandbox & Auto-Evolução** integrado
-- **Widget reativo de Spotify & Serviços Google**
-- **Design glassmorphism** com efeitos de partículas e glow
-
-### 🔗 Integrações de Serviços
-- **Google** (Gmail, Gemini, Calendar, YouTube, Drive)
-- **Spotify** (Playback, busca de faixas e playlists)
-- **Microsoft 365** (OneDrive)
-- Arquitetura plugável sem obrigatoriedade de chaves hardcoded
-
----
-
-## 📁 Estrutura do Projeto
-
-```
-SextaFeira/
-├── 📄 README.md                              ← Você está aqui
-├── 📄 SextaFeira.sln                         ← Solution .NET
-├── 📄 docker-compose.yml                     ← Orquestração Docker
-├── 📄 Dockerfile.backend                     ← Build do backend
-├── 📁 .agents/                               ← Documentação auto-evolutiva do agente
-│   ├── 📄 ARCHITECTURE.md                    ← Decisões arquiteturais
-│   ├── 📄 CONVENTIONS.md                     ← Padrões e convenções de código
-│   ├── 📄 DOMAIN_MODEL.md                    ← Modelo de domínio
-│   ├── 📄 INFRASTRUCTURE_GUIDE.md            ← Guia de infraestrutura
-│   ├── 📄 MCP_TOOLS_REGISTRY.md              ← Catálogo de ferramentas MCP
-│   ├── 📄 OAUTH_INTEGRATION_GUIDE.md         ← Guia de integração OAuth
-│   ├── 📄 SELF_EVOLUTION_PROTOCOL.md         ← Protocolo de auto-evolução
-│   └── 📄 CHANGELOG.md                      ← Log de mudanças automático
-├── 📁 src/
-│   ├── 📁 SextaFeira.Domain/                 ← Entidades, Interfaces, Enums
-│   ├── 📁 SextaFeira.Application/            ← Orquestradores, Use Cases
-│   ├── 📁 SextaFeira.Infrastructure/         ← Implementações concretas
-│   │   ├── 📁 Geolocation/                   ← GPS/IP em tempo real
-│   │   ├── 📁 Integrations/                  ← Conectores de serviços
-│   │   ├── 📁 LLMs/                          ← Provedores de LLM
-│   │   ├── 📁 MCP/                           ← Registry de ferramentas MCP
-│   │   ├── 📁 Network/                       ← Scanner de rede local
-│   │   ├── 📁 Persistence/                   ← EF Core + pgvector
-│   │   ├── 📁 Sandbox/                       ← Docker container runner
-│   │   ├── 📁 Stealth/                       ← Playwright anti-bot
-│   │   ├── 📁 Voice/                         ← STT/TTS engines
-│   │   └── 📁 WebAutomation/                 ← Browser automation
-│   ├── 📁 SextaFeira.WebApi/                 ← ASP.NET Core API + SignalR
-│   │   ├── 📁 Controllers/                   ← REST endpoints
-│   │   ├── 📁 Hubs/                          ← SignalR hubs (Telemetria + Voz)
-│   │   ├── 📄 Program.cs                     ← DI Container + Pipeline
-│   │   └── 📄 appsettings.json               ← Configuração
-│   └── 📁 SextaFeira.Web/                    ← Frontend React + Three.js
-│       ├── 📁 src/
-│       │   ├── 📄 App.tsx                     ← Componente principal HUD
-│       │   ├── 📁 components/                 ← Componentes UI
-│       │   ├── 📁 hooks/                      ← Custom hooks React
-│       │   └── 📁 styles/                     ← CSS/estilos
-│       ├── 📄 index.html                      ← Entry point
-│       ├── 📄 vite.config.ts                  ← Configuração Vite
-│       └── 📄 package.json                    ← Dependências frontend
-└── 📁 tests/
-    └── 📁 SextaFeira.Tests/                   ← Testes unitários e de integração
+```powershell
+ollama pull llama3.1:8b         # ou outro modelo com suporte a ferramentas (veja abaixo)
+ollama pull nomic-embed-text    # memória de longo prazo
+./start.ps1                     # compila o HUD, sobe o núcleo e reinicia quando ela se autoprograma
 ```
 
----
+Abra `http://localhost:5000`, clique em **Ligar microfone** e diga *"Sexta-Feira, como está o tempo?"*.
 
-## 📋 Pré-Requisitos
+Na primeira execução o núcleo baixa o modelo Whisper escolhido (padrão `small`, ~190 MB) para `data/models`.
 
-| Requisito | Versão Mínima | Necessário |
-|-----------|--------------|------------|
-| [.NET SDK](https://dotnet.microsoft.com/download) | 10.0+ | ✅ |
-| [Node.js](https://nodejs.org/) | 18+ | ✅ |
-| [Docker Desktop](https://www.docker.com/products/docker-desktop) | 24+ | ✅ |
-| [PostgreSQL](https://www.postgresql.org/) | 16+ | ⚙️ (via Docker) |
-| [Ollama](https://ollama.ai/) | Latest | 🔧 (opcional p/ LLM local) |
+### Outros dispositivos (celular, tablet, outro PC)
 
----
+O terminal mostra os endereços da rede, por exemplo `https://192.168.1.100:5001`. Abra no aparelho, aceite o aviso de certificado autoassinado ("Avançado → Continuar") e ligue o microfone. É o HTTPS que permite ao navegador liberar o microfone fora do `localhost`. Para usar só no PC: `./start.ps1 -LocalOnly`.
 
-## 🚀 Instalação e Execução
+Todos os aparelhos compartilham a mesma conversa; quem pergunta é quem ouve a resposta.
 
-### Backend (.NET 10 API)
-```bash
-cd src/SextaFeira.WebApi
-dotnet run
-```
-API disponível em `http://localhost:5000`
+## Cérebro (LLM)
 
-### Frontend (React HUD)
-```bash
-cd src/SextaFeira.Web
-npm run dev
-```
-HUD disponível em: `http://localhost:5173`
+| Engine | Como conectar | Observações |
+|---|---|---|
+| **Ollama (padrão)** | nada; usa o modelo de `Configurações → Modelos` | 100% local. Precisa de modelo com *tool calling*. |
+| Claude | chave nas configurações, ou o perfil do `ant auth login` | SDK oficial da Anthropic; padrão `claude-opus-5-5`, esforço baixo para respostas rápidas. |
+| ChatGPT | chave da OpenAI nas configurações | qualquer modelo de chat da OpenAI |
+| Gemini | chave do Google AI Studio nas configurações | endpoint compatível com OpenAI |
 
-### Tudo via Docker Compose (Recomendado)
-Para subir o ecossistema completo (PostgreSQL + pgvector, Ollama, Backend .NET WebApi e Frontend React/Nginx):
-```bash
-docker compose up -d --build
-```
+Se a nuvem falhar, ela responde com o modelo local (dá para desligar).
 
-Serviços disponíveis:
-- **Interface Web HUD 3D**: `http://localhost:5173`
-- **Swagger / API REST**: `http://localhost:5000/swagger`
-- **Banco de Dados pgvector**: `localhost:5432`
-- **Ollama**: `http://localhost:11434`
+**Escolha do modelo local:** o Llama 3.1 8B não cabe inteiro em GPUs de 6 GB (parte roda na CPU), então a primeira palavra leva cerca de 3 s. Modelos menores com bom suporte a ferramentas, como `qwen3:4b` ou `qwen2.5:7b`, cabem inteiros e respondem bem mais rápido. Troque em **Configurações**.
 
-Para verificar o status e logs dos containers:
-```bash
-docker compose ps
-docker compose logs -f
+## Serviços (MCP)
+
+Edite em **Configurações → Serviços conectados** (ou `data/mcp.json`). O formato é o mesmo do Claude Desktop, Cursor e VS Code:
+
+```jsonc
+{
+  "mcpServers": {
+    "arquivos": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "C:\\Users\\voce\\Documents"] },
+    "github":   { "url": "https://api.githubcopilot.com/mcp/" }
+  }
+}
 ```
 
----
+- Servidores **locais** (`command`) rodam como processos filhos.
+- Servidores **remotos** (`url`) com OAuth abrem o login no navegador do PC uma vez; o token fica salvo em `data/mcp-tokens`. É assim que dá para conectar contas sem chave de API, quando o serviço oferece um servidor MCP remoto.
+- As ferramentas aparecem para a assistente como `servidor__ferramenta`.
 
-## 🔐 Variáveis de Ambiente
+## Ferramentas embutidas
 
-| Variável | Descrição | Default |
-|----------|-----------|---------|
-| `ConnectionStrings__PostgresVector` | Connection string PostgreSQL | `Host=localhost;...` |
-| `Ollama__BaseUrl` | URL do servidor Ollama | `http://localhost:11434` |
-| `Ollama__Model` | Modelo Ollama padrão | `phi3:mini` |
-| `LLM__GoogleGemini__ApiKey` | API Key Google Gemini | *(vazio)* |
-| `LLM__OpenAI__ApiKey` | API Key OpenAI | *(vazio)* |
-| `LLM__Anthropic__ApiKey` | API Key Anthropic | *(vazio)* |
-| `LLM__Groq__ApiKey` | API Key Groq | *(vazio)* |
-| `OAuth__Google__ClientId` | OAuth Google Client ID | *(vazio)* |
-| `OAuth__Google__ClientSecret` | OAuth Google Client Secret | *(vazio)* |
-| `OAuth__LinkedIn__ClientId` | OAuth LinkedIn Client ID | *(vazio)* |
-| `OAuth__Spotify__ClientId` | OAuth Spotify Client ID | *(vazio)* |
+| Ferramenta | O que faz |
+|---|---|
+| `get_weather` | clima e previsão (Open-Meteo, sem chave) |
+| `web_search` / `read_webpage` | Wikipédia + Google Notícias (RSS); opcionalmente seu SearXNG (`SearxngUrl`) |
+| `remember` / `forget` | memória de longo prazo local; as memórias relevantes entram sozinhas no contexto |
+| `open_on_computer` | abre um link no navegador do PC |
+| `code_*`, `restart_myself` | **autoprogramação**: lê, busca, edita e compila o próprio código, desfaz mudanças e reinicia. Nunca faz commit sem você pedir. |
 
----
+## Voz
 
-## 📡 API Endpoints
+- **Reconhecimento:** Whisper local (`tiny` a `large-v3-turbo`), acelerado por Vulkan.
+- **Fala:** voz neural do próprio aparelho: no Edge, "Francisca Online (Natural)"; no Chrome, "Google português do Brasil"; no iPhone, "Luciana". Escolha em **Configurações → Voz**. Para um TTS no servidor, implemente `ITextToSpeech`.
+- **Palavras de ativação:** "Sexta-Feira", "Sexta", "Ei Sexta", "Friday", tolerantes a erros de transcrição ("Sesta-Feira"). Depois de uma resposta, dá para continuar falando sem repetir o nome por alguns segundos (configurável).
 
-### Core & Auto-Evolução
-| Método | Rota | Descrição |
-|--------|------|-----------|
-| `POST` | `/api/core/process` | Processa input do usuário (texto/voz) |
-| `GET` | `/api/core/status` | Status do sistema e telemetria |
-| `POST` | `/api/evolution/evolve` | Altera e compila o próprio código C# em tempo de execução |
+## Estrutura
 
-### Sandbox
-| Método | Rota | Descrição |
-|--------|------|-----------|
-| `POST` | `/api/sandbox/execute` | Executa código em Docker isolado |
-| `POST` | `/api/sandbox/self-heal` | Loop de auto-correção de código |
+```
+src/SextaFeira.Domain          contratos: mensagens, engines, ferramentas, memória, voz, configurações
+src/SextaFeira.Application     agente (loop de ferramentas), prompt, divisor de frases, palavra de ativação
+src/SextaFeira.Infrastructure  engines (Ollama/OpenAI/Gemini/Anthropic), MCP, Whisper, memória, ferramentas
+src/SextaFeira.WebApi          hub SignalR multi-dispositivo, API de configurações, HTTPS da rede local
+src/SextaFeira.Web             HUD React + Three.js (captura de voz, fala, configurações)
+tests/SextaFeira.Tests         testes do agente, palavra de ativação e streaming
+data/                          (fora do git) configurações, chaves, memória, modelos, certificados
+```
 
-### Rede
-| Método | Rota | Descrição |
-|--------|------|-----------|
-| `GET` | `/api/network/devices` | Escaneia dispositivos na rede local |
+## Desenvolvimento
 
-### Integrações Pessoais (Spotify, Google, OneDrive)
-| Método | Rota | Descrição |
-|--------|------|-----------|
-| `GET` | `/api/personal/calendar` | Próximos eventos do calendário |
-| `GET` | `/api/personal/emails` | E-mails recentes |
-| `GET` | `/api/personal/onedrive` | Arquivos do OneDrive |
+```powershell
+dotnet test                                   # testes
+cd src/SextaFeira.Web; npm run dev            # HUD com hot reload em :5173 (usa o núcleo em :5000)
+dotnet run --project src/SextaFeira.WebApi    # núcleo
+```
 
-### Geolocalização
-| Método | Rota | Descrição |
-|--------|------|-----------|
-| `GET` | `/api/geolocation/live?lat=&lon=` | Localização + clima em tempo real |
+## Licença
 
-### Memória Vetorial
-| Método | Rota | Descrição |
-|--------|------|-----------|
-| `GET` | `/api/memory/list` | Listar memórias ativas |
-| `POST` | `/api/memory/recycle` | Executar garbage collection de memórias |
-
-### SignalR Hubs
-| Hub | Rota | Descrição |
-|-----|------|-----------|
-| `HudTelemetryHub` | `/hubs/telemetry` | Telemetria e estado do agente em tempo real |
-| `VoiceStreamHub` | `/hubs/voice` | Streaming bidirecional de áudio |
-
----
-
-## 🔗 Integrações de Serviços (OAuth)
-
-O Sexta-Feira suporta conexão fácil com múltiplos serviços externos. A arquitetura de OAuth foi desenhada para ser extensível — basta adicionar um novo `IOAuthProvider` na camada de Infrastructure.
-
-### Serviços Suportados (Roadmap)
-| Serviço | Escopo | Status |
-|---------|--------|--------|
-| **Google** (Gmail, YouTube, Drive, Calendar) | Completo | ✅ Conectado (MCP) |
-| **Spotify** | Reprodução + Playlists | ✅ Conectado (MCP) |
-| **LinkedIn** | Perfil + Feed | 🔜 Em implementação |
-| **GitHub** | Repos + Issues + PRs | 📋 Planejado |
-| **Microsoft 365** | Outlook + OneDrive + Teams | 📋 Planejado |
-| **Discord** | Mensagens + Canais | 📋 Planejado |
-| **Notion** | Páginas + Databases | 📋 Planejado |
-
-### Como Funciona
-1. **Comando de Voz:** O usuário diz *"Ei, Sexta-Feira, toque Starboy no Spotify"* ou *"Ei, Sexta-Feira, envie um e-mail"*
-2. **Orquestrador:** Detecta a intenção e aciona a ferramenta MCP correspondente
-3. **HUD:** Exibe os controles reativos na interface holográfica
-4. **Pronto:** Resposta executada e sintetizada por voz
-
----
-
-## 🧬 Auto-Evolução do Código
-
-O Sexta-Feira é capaz de se **auto-desenvolver**, gerando e integrando novas funcionalidades autonomamente:
-
-### Protocolo de Auto-Evolução
-1. **Análise de Contexto** — O agente analisa a documentação em `.agents/` para entender a arquitetura
-2. **Geração de Código** — Usa a LLM para gerar implementações em C# seguindo as convenções
-3. **Sandbox & Compilação Testing** — Testa o código gerado via `dotnet build`
-4. **Self-Healing** — Se falhar, entra no loop de auto-correção automático e faz rollback se necessário
-5. **Integração & Log** — Se aprovado, integra o código ao projeto e atualiza `.agents/CHANGELOG.md`
-
-> ⚠️ **Segurança:** Todo código alterado passa por compilação rigorosa e backup temporário antes de ser aplicado.
-
----
-
-## 📖 Documentação do Agente (.agents)
-
-A pasta `.agents/` contém documentação viva que o próprio sistema mantém atualizada. Ela serve como **contexto de referência** para que o agente (e desenvolvedores humanos) compreendam a arquitetura, convenções e estado atual do projeto.
-
-Veja [`.agents/README.md`](.agents/README.md) para o índice completo.
-
----
-
-## 🗺️ Roadmap
-
-- [x] Clean Architecture + DDD scaffolding
-- [x] CognitiveOrchestrator com fallback multi-provider
-- [x] SelfHealingEngine com Docker Sandbox
-- [x] McpServerRegistry com 13 ferramentas ativas
-- [x] HUD Sci-Fi holográfica (React + Three.js)
-- [x] Geolocalização em tempo real (GPS/IP + clima)
-- [x] Network Scanner (rede local)
-- [x] SignalR telemetria em tempo real
-- [x] Conectores MCP Spotify (Playback, busca, track info)
-- [x] Conectores MCP Google (Gmail, Gemini, Calendar)
-- [x] Detecção de Wake-Word Multilíngue (`"Ei, Sexta feira"`, `"Hey Friday"`)
-- [x] Engine de Auto-Evolução do Código (`SelfEvolutionService`)
-- [ ] Testes E2E com Playwright
-- [ ] PWA + Service Worker offline
-- [ ] Whisper local (sem cloud)
-- [ ] Plugin system MCP dinâmico
-- [ ] Dashboard admin de tokens OAuth** Exibe uma tela de login segura (popup/redirect) para o serviço
-4. **Token Storage:** Tokens são armazenados de forma segura (criptografados) na memória persistente
-5. **Pronto:** Serviço fica disponível como ferramenta MCP
-
----
-
-## 🧬 Auto-Evolução do Código
-
-O Sexta-Feira é capaz de se **auto-desenvolver**, gerando e integrando novas funcionalidades autonomamente:
-
-### Protocolo de Auto-Evolução
-1. **Análise de Contexto** — O agente analisa a documentação em `.agents/` para entender a arquitetura
-2. **Geração de Código** — Usa o LLM para gerar implementações seguindo as convenções do projeto
-3. **Sandbox Testing** — Testa o código gerado em Docker isolado (Zero-Trust)
-4. **Self-Healing** — Se falhar, entra no loop de auto-correção (até 3 iterações)
-5. **Integração** — Se aprovado, integra o código ao projeto e atualiza a documentação
-6. **Documentação Automática** — Atualiza `.agents/CHANGELOG.md` e docs relevantes
-
-> ⚠️ **Segurança:** Todo código gerado é executado em containers isolados antes de qualquer integração ao codebase principal.
-
----
-
-## 📖 Documentação do Agente (.agents)
-
-A pasta `.agents/` contém documentação viva que o próprio sistema mantém atualizada. Ela serve como **contexto de referência** para que o agente (e desenvolvedores humanos) compreendam a arquitetura, convenções e estado atual do projeto.
-
-Veja [`.agents/README.md`](.agents/README.md) para o índice completo.
-
----
-
-## 🗺️ Roadmap
-
-- [x] Clean Architecture + DDD scaffolding
-- [x] CognitiveOrchestrator com fallback multi-provider
-- [x] SelfHealingEngine com Docker Sandbox
-- [x] McpServerRegistry com 8 ferramentas
-- [x] HUD Sci-Fi holográfica (React + Three.js)
-- [x] Geolocalização em tempo real (GPS/IP + clima)
-- [x] Network Scanner (rede local)
-- [x] SignalR telemetria em tempo real
-- [ ] OAuth Provider Framework (Google, LinkedIn, Spotify)
-- [ ] Protocolo de Auto-Evolução do Código
-- [ ] Testes E2E com Playwright
-- [ ] PWA + Service Worker offline
-- [ ] Whisper local (sem cloud)
-- [ ] Plugin system MCP dinâmico
-- [ ] Dashboard admin de tokens OAuth
-
----
-
-## 🤝 Contribuição
-
-1. Fork o repositório
-2. Crie uma branch (`git checkout -b feature/nova-feature`)
-3. Faça commit das mudanças (`git commit -m 'feat: Descrição da feature'`)
-4. Push para a branch (`git push origin feature/nova-feature`)
-5. Abra um Pull Request
-
-### Convenções de Commit
-- `feat:` Nova funcionalidade
-- `fix:` Correção de bug
-- `docs:` Atualização de documentação
-- `refactor:` Refatoração de código
-- `test:` Adição ou correção de testes
-- `chore:` Tarefas de manutenção
-
----
-
-## 📄 Licença
-
-Este projeto está licenciado sob a **MIT License** — veja [LICENSE](LICENSE) para detalhes.
-
----
-
-<p align="center">
-  <strong>🧠 Sexta-Feira AI</strong> — <em>"Estou ao seu dispor, senhor."</em>
-  <br/>
-  Feito com 💙 e muita IA
-</p>
+MIT

@@ -20,23 +20,21 @@ export const HolographicSubtitles: React.FC<HolographicSubtitlesProps> = ({
 }) => {
   const [displayedAiText, setDisplayedAiText] = useState('');
 
-  // Typewriter stream effect for AI response
+  // Efeito máquina de escrever que acompanha o streaming: continua de onde parou quando chega mais texto.
+  const shownRef = React.useRef(0);
   useEffect(() => {
     if (!lastAiResponse) {
+      shownRef.current = 0;
       setDisplayedAiText('');
       return;
     }
-
-    let i = 0;
-    setDisplayedAiText('');
+    if (shownRef.current > lastAiResponse.length) shownRef.current = 0; // nova resposta
     const fullText = lastAiResponse;
     const interval = setInterval(() => {
-      i++;
-      setDisplayedAiText(fullText.slice(0, i));
-      if (i >= fullText.length) {
-        clearInterval(interval);
-      }
-    }, 18);
+      shownRef.current = Math.min(fullText.length, shownRef.current + 2);
+      setDisplayedAiText(fullText.slice(0, shownRef.current));
+      if (shownRef.current >= fullText.length) clearInterval(interval);
+    }, 16);
 
     return () => clearInterval(interval);
   }, [lastAiResponse]);

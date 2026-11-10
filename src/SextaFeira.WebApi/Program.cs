@@ -1,91 +1,108 @@
-using Microsoft.EntityFrameworkCore;
-using SextaFeira.Application.Orchestrator;
-using SextaFeira.Application.Services;
-using SextaFeira.Domain.Enums;
-using SextaFeira.Domain.Interfaces;
-using SextaFeira.Infrastructure.Geolocation;
-using SextaFeira.Infrastructure.Integrations;
-using SextaFeira.Infrastructure.LLMs;
-using SextaFeira.Infrastructure.MCP;
-using SextaFeira.Infrastructure.Network;
-using SextaFeira.Infrastructure.OpenJarvis;
-using SextaFeira.Infrastructure.Persistence;
-using SextaFeira.Infrastructure.Sandbox;
-using SextaFeira.Infrastructure.Stealth;
+using System.Net;
+using SextaFeira.Application.Agent;
+using SextaFeira.Domain.Agent;
+using SextaFeira.Infrastructure.Engines;
+using SextaFeira.Infrastructure.Mcp;
+using SextaFeira.Infrastructure.Storage;
+using SextaFeira.Infrastructure.Tools;
 using SextaFeira.Infrastructure.Voice;
-using SextaFeira.WebApi.Hubs;
+using SextaFeira.WebApi.Hosting;
+using SextaFeira.WebApi.Realtime;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// Dados locais (configurações, memória, modelos, certificados) ficam em <repo>/data, fora do git.
+var repoRoot = DataPaths.FindRepoRoot(builder.Environment.ContentRootPath);
+DataPaths.Initialize(builder.Configuration["DataPath"] ?? Path.Combine(repoRoot ?? builder.Environment.ContentRootPath, "data"));
+
+var httpPort = builder.Configuration.GetValue("HttpPort", 5000);
+var httpsPort = builder.Configuration.GetValue("HttpsPort", 5001);
+// ListenOnLan=false restringe o servidor a este computador (sem microfones de outros dispositivos).
+var listenOnLan = builder.Configuration.GetValue("ListenOnLan", true);
+var bindAddress = listenOnLan ? IPAddress.Any : IPAddress.Loopback;
+var certificate = LanCertificate.LoadOrCreate();
+builder.WebHost.ConfigureKestrel(k =>
+{
+    k.Listen(bindAddress, httpPort);
+    k.Listen(bindAddress, httpsPort, o => o.UseHttps(certificate));
+});
+
+// ── HTTP ──────────────────────────────────────────────────────────────────
+builder.Services.AddHttpClient("llm", c => c.Timeout = Timeout.InfiniteTimeSpan);
+builder.Services.AddHttpClient("probe", c => c.Timeout = TimeSpan.FromSeconds(3));
+builder.Services.AddHttpClient("web", c =>
+{
+    c.Timeout = TimeSpan.FromSeconds(20);
+    c.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0 Safari/537.36");
+    c.DefaultRequestHeaders.AcceptLanguage.ParseAdd("pt-BR,pt;q=0.9");
+});
+
+builder.Services.AddHttpClient("open-data", c =>
+{
+    c.Timeout = TimeSpan.FromSeconds(15);
+    c.DefaultRequestHeaders.UserAgent.ParseAdd("SextaFeira/3.0 (assistente pessoal local; .NET)");
+});
+
+// ── Núcleo ────────────────────────────────────────────────────────────────
+builder.Services.AddSingleton<ISettingsStore, JsonSettingsStore>();
+
+builder.Services.AddSingleton<OllamaEngine>();
+builder.Services.AddSingleton<IChatEngine>(sp => sp.GetRequiredService<OllamaEngine>());
+builder.Services.AddSingleton<IChatEngine, OpenAiEngine>();
+builder.Services.AddSingleton<IChatEngine, GeminiEngine>();
+builder.Services.AddSingleton<IChatEngine, AnthropicEngine>();
+builder.Services.AddSingleton<EngineRouter>();
+
+builder.Services.AddSingleton<IMemoryStore, FileMemoryStore>();
+
+builder.Services.AddSingleton(sp => new CodeTools(
+    sp.GetRequiredService<ISettingsStore>(), sp.GetRequiredService<IHostApplicationLifetime>(), builder.Environment.ContentRootPath));
+builder.Services.AddSingleton<IEnumerable<ITool>>(sp =>
+    BuiltinTools.Create(sp.GetRequiredService<IHttpClientFactory>(), sp.GetRequiredService<IMemoryStore>(), sp.GetRequiredService<ISettingsStore>())
+        .Concat(sp.GetRequiredService<CodeTools>().Create())
+        .ToList());
+
+builder.Services.AddSingleton<McpManager>();
+builder.Services.AddSingleton<IToolProvider>(sp => sp.GetRequiredService<McpManager>());
+builder.Services.AddHostedService(sp => sp.GetRequiredService<McpManager>());
+
+builder.Services.AddSingleton<ToolRegistry>();
+builder.Services.AddSingleton<ConversationAgent>();
+builder.Services.AddHostedService<EngineWarmupService>();
+
+// ── Voz ───────────────────────────────────────────────────────────────────
+builder.Services.AddSingleton<WhisperSpeechToText>();
+builder.Services.AddSingleton<ISpeechToText>(sp => sp.GetRequiredService<WhisperSpeechToText>());
+builder.Services.AddHostedService(sp => sp.GetRequiredService<WhisperSpeechToText>());
+builder.Services.AddSingleton<ITextToSpeech, DeviceTextToSpeech>();
+
+// ── Tempo real ────────────────────────────────────────────────────────────
+builder.Services.AddSingleton<AssistantSessionService>();
+builder.Services.AddSignalR(o =>
+{
+    o.MaximumReceiveMessageSize = 16 * 1024 * 1024; // falas longas em PCM
+    o.EnableDetailedErrors = builder.Environment.IsDevelopment();
+});
 builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-builder.Services.AddSignalR();
-builder.Services.AddHttpClient();
-
-// Configuração do CORS para o HUD React Frontend
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowAll", policy =>
-    {
-        policy.SetIsOriginAllowed(_ => true)
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
-    });
-});
-
-// DbContext PostgreSQL + pgvector
-var connectionString = builder.Configuration.GetConnectionString("PostgresVector") 
-                       ?? "Host=localhost;Port=5432;Database=sextafeira_db;Username=postgres;Password=postgres";
-
-builder.Services.AddDbContext<AppDbContext>(options =>
-{
-    options.UseNpgsql(connectionString, o => o.UseVector());
-});
-
-// Gerenciador de Contas e Conexões de IA (Google, OpenAI, Anthropic)
-builder.Services.AddSingleton<IAiConnectionManager, AiConnectionManager>();
-
-// Provedores Oficiais de Nuvem de Alta Velocidade (Gemini 2.0 Flash, GPT-4o, Claude 3.5 Sonnet)
-builder.Services.AddSingleton<ILLMProvider, GoogleGeminiCloudProvider>();
-builder.Services.AddSingleton<ILLMProvider, OpenAiGptCloudProvider>();
-builder.Services.AddSingleton<ILLMProvider, AnthropicClaudeCloudProvider>();
-builder.Services.AddSingleton<ILLMProvider, OllamaLocalFallbackProvider>();
-
-// Serviços de Infraestrutura e Domínio
-builder.Services.AddScoped<IMemoryStore, PgVectorMemoryStore>();
-builder.Services.AddSingleton<IGeolocationService, LiveGeolocationService>();
-builder.Services.AddSingleton<INetworkScanner, LocalNetworkScanner>();
-builder.Services.AddSingleton<IStealthBrowser, PlaywrightStealthBrowser>();
-builder.Services.AddSingleton<ISandboxService, DockerContainerRunner>();
-builder.Services.AddSingleton<IPersonalIntegrationsService, PersonalIntegrationsService>();
-builder.Services.AddSingleton<IVoiceEngine, VoiceEngineService>();
-builder.Services.AddScoped<IMcpHost, McpServerRegistry>();
-
-// Motor OpenJarvis (Stanford Hazy Research / SAIL - Intelligence Per Watt)
-builder.Services.AddSingleton<IOpenJarvisEngine, OpenJarvisInferenceEngine>();
-
-// Orquestradores e Motores da Aplicação
-builder.Services.AddScoped<CognitiveOrchestrator>();
-builder.Services.AddScoped<SelfHealingEngine>();
-builder.Services.AddScoped<MemoryRecyclerService>();
-builder.Services.AddScoped<ISelfEvolutionService, SelfEvolutionService>();
+builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.SetIsOriginAllowed(_ => true).AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment() || true)
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-
-app.UseCors("AllowAll");
-app.UseAuthorization();
-
+app.UseCors();
+app.UseDefaultFiles();
+app.UseStaticFiles();
 app.MapControllers();
-app.MapHub<HudTelemetryHub>("/hubs/telemetry");
-app.MapHub<VoiceStreamHub>("/hubs/voice");
+app.MapHub<AssistantHub>("/hubs/assistant");
+app.MapFallbackToFile("index.html");
+
+app.Lifetime.ApplicationStarted.Register(() =>
+{
+    var log = app.Services.GetRequiredService<ILogger<Program>>();
+    log.LogInformation("Sexta-Feira no ar. Neste computador: http://localhost:{Http}", httpPort);
+    foreach (var ip in listenOnLan ? LanAddresses() : [])
+        log.LogInformation("Outros dispositivos da rede: https://{Ip}:{Https}  (aceite o aviso de certificado)", ip, httpsPort);
+});
 
 app.Run();
+
+static IEnumerable<IPAddress> LanAddresses() => LanCertificate.LanAddresses();

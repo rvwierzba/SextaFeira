@@ -1,5 +1,18 @@
 # 📜 CHANGELOG — Sexta-Feira
 
+## [v3.0.0] - 2026-11-10
+
+Reescrita do núcleo: o sistema anterior era em grande parte simulado (ferramentas por palavra-chave, resultados que nunca voltavam ao LLM, telemetria e integrações falsas).
+
+- Agente real com tool calling nativo e loop de ferramentas; contexto de conversa mantido entre turnos e dispositivos.
+- Engines: Ollama (padrão, local), Claude (SDK oficial), ChatGPT e Gemini, com fallback local.
+- Respostas em streaming falando frase a frase; interrupção ao falar por cima; filtro de eco.
+- Voz multi-dispositivo: captura com VAD no navegador, Whisper local na GPU, HTTPS na rede local.
+- Cliente MCP de verdade (stdio + HTTP com OAuth) configurado por `data/mcp.json`.
+- Autoprogramação com ferramentas `code_*` presas ao repositório e reinício automático.
+- Memória de longo prazo em arquivo com embeddings locais (sem Postgres).
+- Removidos: mocks de Spotify/Gmail/Calendar/OneDrive, scanner de rede e sandbox simulados, "OpenJarvis" fictício, Docker/Postgres.
+
 ## [v2.0.0] - 2026-11-09
 
 ### 🚀 Novas Funcionalidades

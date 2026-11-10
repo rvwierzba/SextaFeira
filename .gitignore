@@ -34,3 +34,6 @@ Desktop.ini
 *.log
 *.tmp
 *.temp
+# Dados locais da Sexta-Feira (configurações, chaves, memória, modelos, certificados)
+/data/
+src/SextaFeira.WebApi/wwwroot/

@@ -1,4 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -14,15 +15,11 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.2" />
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.2" />
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.3" />
-    <PackageReference Include="Pgvector.EntityFrameworkCore" Version="0.2.1" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\SextaFeira.Domain\SextaFeira.Domain.csproj" />
     <ProjectReference Include="..\..\src\SextaFeira.Application\SextaFeira.Application.csproj" />
     <ProjectReference Include="..\..\src\SextaFeira.Infrastructure\SextaFeira.Infrastructure.csproj" />
   </ItemGroup>
+
 </Project>
