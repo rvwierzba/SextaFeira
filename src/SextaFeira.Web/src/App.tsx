@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { HologramCoreCanvas, AgentVisualState } from './components/3d/HologramCoreCanvas';
 import { ModelCoreWidget, GeolocationWidget } from './components/hud/ModelCoreAndGeoWidgets';
 import { NetworkMapWidget, PersonalServicesWidget } from './components/hud/NetworkAndPersonalWidgets';
@@ -29,6 +29,19 @@ export const App: React.FC = () => {
     '[MCP] Ferramentas ativas e integradas ao agente.'
   ]);
   const [isSandboxRunning, setIsSandboxRunning] = useState(false);
+  const sessionIdRef = useRef<string>(
+    (() => {
+      try {
+        const saved = sessionStorage.getItem('sextafeira_session_id');
+        if (saved) return saved;
+        const newId = crypto.randomUUID();
+        sessionStorage.setItem('sextafeira_session_id', newId);
+        return newId;
+      } catch {
+        return crypto.randomUUID();
+      }
+    })()
+  );
 
   const handleCommandDetected = async (command: string) => {
     const cleanCmd = command.trim();
@@ -50,6 +63,7 @@ export const App: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userInput: cleanCmd,
+          sessionId: sessionIdRef.current,
           enableVoiceOutput: false
         }),
         signal: controller.signal
@@ -59,6 +73,10 @@ export const App: React.FC = () => {
 
       if (response && response.ok) {
         const data = await response.json();
+        if (data.sessionId) {
+          sessionIdRef.current = data.sessionId;
+          try { sessionStorage.setItem('sextafeira_session_id', data.sessionId); } catch { }
+        }
         textResponse = data.textResponse || 'Pronta, Rafael.';
       } else {
         textResponse = 'Desculpe, tive uma instabilidade de conexão com o modelo de inteligência artificial.';

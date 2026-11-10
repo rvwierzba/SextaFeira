@@ -209,23 +209,11 @@ public class OpenJarvisInferenceEngine : IOpenJarvisEngine
         // Heurísticas de decomposição de intenção estilo Stanford Spec Search
         var lower = userGoal.ToLowerInvariant();
 
-        // Mapeamento dinâmico baseado nas ferramentas fornecidas
-        foreach (var tool in tools)
+        // Acionamento de ferramentas MCP apenas para intenções explícitas (sem falsos positivos)
+        if (lower.Contains("evoluir código") || lower.Contains("auto evolução") || lower.Contains("self evolve") || lower.Contains("evolução do sistema"))
         {
-            var toolNameLower = tool.Name.ToLowerInvariant();
-            var descLower = tool.Description.ToLowerInvariant();
-            var nameWords = toolNameLower.Split('_', StringSplitOptions.RemoveEmptyEntries);
-            var descWords = descLower.Split(new[] { ' ', ',', '.', ';', '(', ')' }, StringSplitOptions.RemoveEmptyEntries);
-
-            bool matches = nameWords.Any(w => w.Length >= 3 && lower.Contains(w.Substring(0, Math.Min(w.Length, 5))))
-                || descWords.Any(w => w.Length >= 4 && lower.Contains(w.Substring(0, Math.Min(w.Length, 6))))
-                || lower.Contains(toolNameLower);
-
-            if (matches && !requiredTools.Contains(tool.Name))
-            {
-                requiredTools.Add(tool.Name);
-                steps.Add($"Executar tool '{tool.Name}': {tool.Description}");
-            }
+            if (!requiredTools.Contains("self_evolve_codebase"))
+                requiredTools.Add("self_evolve_codebase");
         }
 
         if (lower.Contains("agenda") || lower.Contains("calendario") || lower.Contains("calendário") || lower.Contains("reuniao") || lower.Contains("reunião") || lower.Contains("compromisso"))
@@ -337,24 +325,45 @@ public class OpenJarvisInferenceEngine : IOpenJarvisEngine
         string responseText = string.Empty;
         try
         {
-            var generatePayload = new
+            var messages = new List<object>();
+            if (!string.IsNullOrWhiteSpace(request.SystemPrompt))
+            {
+                messages.Add(new { role = "system", content = request.SystemPrompt });
+            }
+            if (request.History != null && request.History.Count > 0)
+            {
+                foreach (var msg in request.History.TakeLast(16))
+                {
+                    messages.Add(new { role = msg.Role, content = msg.Content });
+                }
+            }
+            // Adiciona a pergunta atual caso ainda não esteja na lista de mensagens
+            if (messages.Count == 0 || !messages.Any(m => m.GetType().GetProperty("content")?.GetValue(m)?.ToString() == request.Prompt))
+            {
+                messages.Add(new { role = "user", content = request.Prompt });
+            }
+
+            var chatPayload = new
             {
                 model = modelToUse,
-                prompt = request.Prompt,
-                system = request.SystemPrompt,
+                messages = messages,
                 stream = false,
                 options = new
                 {
-                    temperature = 0.7,
-                    num_predict = 100
+                    temperature = 0.65,
+                    num_predict = 120
                 }
             };
 
-            var res = await _httpClient.PostAsJsonAsync($"{_ollamaBaseUrl}/api/generate", generatePayload, cancellationToken);
+            var res = await _httpClient.PostAsJsonAsync($"{_ollamaBaseUrl}/api/chat", chatPayload, cancellationToken);
             if (res.IsSuccessStatusCode)
             {
                 var json = await res.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: cancellationToken);
-                if (json.TryGetProperty("response", out var respProp))
+                if (json.TryGetProperty("message", out var msgProp) && msgProp.TryGetProperty("content", out var contentProp))
+                {
+                    responseText = contentProp.GetString()?.Trim() ?? string.Empty;
+                }
+                else if (json.TryGetProperty("response", out var respProp))
                 {
                     responseText = respProp.GetString()?.Trim() ?? string.Empty;
                 }
@@ -362,7 +371,7 @@ public class OpenJarvisInferenceEngine : IOpenJarvisEngine
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Falha na inferência neural do motor OpenJarvis com Ollama.");
+            _logger.LogWarning(ex, "Falha na inferência neural do motor OpenJarvis com Ollama via /api/chat.");
         }
 
         if (string.IsNullOrWhiteSpace(responseText))

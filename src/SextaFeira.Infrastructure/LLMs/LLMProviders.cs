@@ -78,25 +78,53 @@ public class OllamaLocalFallbackProvider : ILLMProvider
         try
         {
             var modelToUse = await GetEffectiveModelNameAsync(cancellationToken);
-            var payload = new
+            var messages = new List<object>();
+            if (!string.IsNullOrWhiteSpace(request.SystemPrompt))
+            {
+                messages.Add(new { role = "system", content = request.SystemPrompt });
+            }
+            if (request.History != null && request.History.Count > 0)
+            {
+                foreach (var msg in request.History.TakeLast(16))
+                {
+                    messages.Add(new { role = msg.Role, content = msg.Content });
+                }
+            }
+            if (messages.Count == 0 || !messages.Any(m => m.GetType().GetProperty("content")?.GetValue(m)?.ToString() == request.Prompt))
+            {
+                messages.Add(new { role = "user", content = request.Prompt });
+            }
+
+            var chatPayload = new
             {
                 model = modelToUse,
-                prompt = request.Prompt,
-                system = request.SystemPrompt,
+                messages = messages,
                 stream = false,
                 options = new 
                 { 
-                    temperature = 0.4,
-                    num_predict = 90 
+                    temperature = 0.65,
+                    num_predict = 120 
                 }
             };
 
-            var response = await _httpClient.PostAsJsonAsync($"{_baseUrl}/api/generate", payload, cancellationToken);
+            var response = await _httpClient.PostAsJsonAsync($"{_baseUrl}/api/chat", chatPayload, cancellationToken);
             if (response.IsSuccessStatusCode)
             {
                 var json = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: cancellationToken);
-                var responseText = json.GetProperty("response").GetString() ?? "Sem resposta.";
-                return new LLMResponse(responseText.Trim(), ProviderType, modelToUse, 50, 100);
+                string responseText = string.Empty;
+                if (json.TryGetProperty("message", out var msgProp) && msgProp.TryGetProperty("content", out var contentProp))
+                {
+                    responseText = contentProp.GetString()?.Trim() ?? string.Empty;
+                }
+                else if (json.TryGetProperty("response", out var respProp))
+                {
+                    responseText = respProp.GetString()?.Trim() ?? string.Empty;
+                }
+
+                if (!string.IsNullOrWhiteSpace(responseText))
+                {
+                    return new LLMResponse(responseText.Trim(), ProviderType, modelToUse, 50, 100);
+                }
             }
         }
         catch (Exception ex)

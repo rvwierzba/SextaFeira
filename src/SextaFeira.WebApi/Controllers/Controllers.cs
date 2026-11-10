@@ -64,17 +64,18 @@ public class CoreController : ControllerBase
 
         try
         {
-            var cleanText = Uri.EscapeDataString(text.Trim());
-            var url = $"https://translate.google.com/translate_tts?ie=UTF-8&q={cleanText}&tl=pt-BR&client=tw-ob";
-            using var client = new HttpClient();
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
-            var audioBytes = await client.GetByteArrayAsync(url, cancellationToken);
-            return File(audioBytes, "audio/mpeg");
+            var audioBytes = await _voiceEngine.SynthesizeSpeechAsync(text, "pt-BR", cancellationToken);
+            if (audioBytes != null && audioBytes.Length > 0)
+            {
+                return File(audioBytes, "audio/mpeg");
+            }
         }
         catch (Exception ex)
         {
             return StatusCode(500, new { error = "Erro na síntese de áudio PT-BR", details = ex.Message });
         }
+
+        return StatusCode(500, new { error = "Falha ao sintetizar áudio PT-BR." });
     }
 
     [HttpPost("transcribe")]

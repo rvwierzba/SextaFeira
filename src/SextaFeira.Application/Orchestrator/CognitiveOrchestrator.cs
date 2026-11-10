@@ -176,7 +176,7 @@ public class CognitiveOrchestrator
         var llmRequest = new LLMRequest(
             Prompt: request.UserInput,
             SystemPrompt: systemPrompt,
-            History: session.Messages.TakeLast(10).ToList(),
+            History: session.Messages.TakeLast(20).ToList(),
             Tools: availableTools
         );
 

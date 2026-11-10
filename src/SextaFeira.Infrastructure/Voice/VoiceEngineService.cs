@@ -133,8 +133,8 @@ public class VoiceEngineService : IVoiceEngine
         }
 
         // Fallback autônomo imediato caso nenhuma chave externa esteja conectada
-        _logger.LogInformation("Nenhuma chave de API de STT ativa. Retornando comando de saudação/status.");
-        return "Sexta-feira, status do sistema";
+        _logger.LogInformation("Nenhuma chave de API de STT ativa. Áudio não decodificado.");
+        return string.Empty;
     }
 
     private async Task<string> TranscribeWithGeminiAsync(byte[] audioData, string apiKey, CancellationToken cancellationToken)
@@ -218,20 +218,27 @@ public class VoiceEngineService : IVoiceEngine
         return string.Empty;
     }
 
-    public Task<byte[]> SynthesizeSpeechAsync(string text, string voice = "pt-BR-FranciscaNeural", CancellationToken cancellationToken = default)
+    public async Task<byte[]> SynthesizeSpeechAsync(string text, string voice = "pt-BR", CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Sintetizando fala para: {Text}", text.Length > 60 ? text.Substring(0, 60) + "..." : text);
-        
-        var wavHeader = new byte[]
-        {
-            0x52, 0x49, 0x46, 0x46, 0x24, 0x00, 0x00, 0x00,
-            0x57, 0x41, 0x56, 0x66, 0x6D, 0x74, 0x20,
-            0x10, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00,
-            0x44, 0xAC, 0x00, 0x00, 0x88, 0x58, 0x01, 0x00,
-            0x02, 0x00, 0x10, 0x00, 0x64, 0x61, 0x74, 0x61,
-            0x00, 0x00, 0x00, 0x00
-        };
+        _logger.LogInformation("Sintetizando fala PT-BR para: {Text}", text.Length > 60 ? text.Substring(0, 60) + "..." : text);
 
-        return Task.FromResult(wavHeader);
+        try
+        {
+            var cleanText = Uri.EscapeDataString(text.Trim());
+            var url = $"https://translate.google.com/translate_tts?ie=UTF-8&q={cleanText}&tl=pt-BR&client=tw-ob";
+            using var msg = new HttpRequestMessage(HttpMethod.Get, url);
+            msg.Headers.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
+            var resp = await _httpClient.SendAsync(msg, cancellationToken);
+            if (resp.IsSuccessStatusCode)
+            {
+                return await resp.Content.ReadAsByteArrayAsync(cancellationToken);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Falha na síntese de áudio PT-BR via engine de voz.");
+        }
+
+        return Array.Empty<byte>();
     }
 }
