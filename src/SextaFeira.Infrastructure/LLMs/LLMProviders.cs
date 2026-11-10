@@ -153,19 +153,19 @@ public class OllamaLocalFallbackProvider : ILLMProvider
         }
         else if (lower.Contains("olá") || lower.Contains("ola") || lower.Contains("bom dia") || lower.Contains("boa tarde") || lower.Contains("boa noite") || lower.Contains("sexta feira") || lower.Contains("sexta-feira"))
         {
-            directText = "Olá! Todos os sistemas da Sexta-Feira estão online e operacionais. Como posso ajudar você agora? Posso consultar sua agenda do Google, verificar e-mails, analisar sua rede local, consultar o clima ou reproduzir músicas no Spotify.";
+            directText = "Olá! Estou com todos os sistemas online e prontos, como posso te ajudar? Posso consultar sua agenda do Google, verificar e-mails, analisar sua rede local, consultar o clima ou reproduzir músicas no Spotify.";
         }
         else if (lower.Contains("status") || lower.Contains("sistema") || lower.Contains("core"))
         {
-            directText = "Sistemas da Sexta-Feira operando em 100% de capacidade. Barramento MCP, motor de voz, banco vetorial pgvector e integração com Google Calendar ativos.";
+            directText = "Estou com todos os sistemas online e prontos. Meus módulos de inferência, barramento MCP e banco vetorial estão operando com 100% de capacidade. Como posso te ajudar?";
         }
         else if (lower.Contains("quem é você") || lower.Contains("quem e voce") || lower.Contains("o que você faz") || lower.Contains("o que voce faz"))
         {
-            directText = "Eu sou a Sexta-Feira (F.R.I.D.A.Y.), seu assistente e harness autônomo de inteligência artificial. Gerencio sua agenda, e-mails, dispositivos de rede, automação web e execuções seguras em sandbox.";
+            directText = "Eu sou a Sexta-Feira (F.R.I.D.A.Y.), sua assistente pessoal de inteligência artificial. Gerencio sua agenda, e-mails, dispositivos de rede, automação e tudo o que você precisar. Como posso te ajudar agora?";
         }
         else
         {
-            directText = $"Compreendi sua instrução sobre '{request.Prompt}'. Todos os parâmetros foram validados e o sistema está pronto para prosseguir.";
+            directText = $"Entendi sua instrução sobre '{request.Prompt}'. Já estou processando e pronta para prosseguir.";
         }
 
         return new LLMResponse(

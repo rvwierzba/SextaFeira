@@ -34,40 +34,40 @@ export const App: React.FC = () => {
     const q = query.toLowerCase().trim();
 
     if (!q || q === 'sexta feira' || q === 'sexta-feira' || q === 'friday' || q === 'ei sexta') {
-      return 'Sim, operador? Estou ouvindo. Em que posso ajudá-lo agora?';
+      return 'Estou aqui, com todos os sistemas online e prontos. Como posso te ajudar?';
     }
     if (q.includes('olá') || q.includes('ola') || q.includes('oi') || q.includes('bom dia') || q.includes('boa tarde') || q.includes('boa noite')) {
-      return 'Olá! Todos os sistemas da Sexta-Feira e o motor neural estão operacionais. O que você gostaria de executar?';
+      return 'Olá! Estou com todos os sistemas online e prontos, como posso te ajudar?';
     }
     if (q.includes('como você está') || q.includes('tudo bem') || q.includes('tudo bom')) {
-      return 'Estou operando com 100% de capacidade nominal e eficiência máxima de 96.4 TOPS por Watt. Pronta para receber suas instruções.';
+      return 'Estou ótima e com todos os meus sistemas prontos e operando com 100% de capacidade. Como posso te ajudar agora?';
     }
     if (q.includes('quem é você') || q.includes('quem e voce') || q.includes('o que você faz') || q.includes('o que você é')) {
-      return 'Sou a Sexta-Feira, sua assistente autônoma de inteligência artificial multimodal, operando com o motor local-first OpenJarvis da Universidade de Stanford.';
+      return 'Eu sou a Sexta-Feira, sua assistente pessoal de inteligência artificial. Estou aqui para gerenciar seus sistemas, executar tarefas e te ajudar no que você precisar.';
     }
     if (q.includes('status') || q.includes('sistema') || q.includes('hardware') || q.includes('openjarvis') || q.includes('diagnostico') || q.includes('diagnóstico')) {
-      return 'Status dos sistemas: Motor OpenJarvis local online com taxa de eficiência de 96.4 TOPS por Watt. Latência média sub-50ms, acelerador de hardware ativo e todas as 8 ferramentas MCP operacionais.';
+      return 'Estou com todos os sistemas online e prontos. Meus módulos de inferência, aceleradores e ferramentas MCP estão funcionando perfeitamente. Como posso te ajudar?';
     }
     if (q.includes('agenda') || q.includes('compromisso') || q.includes('calendário') || q.includes('reunião')) {
-      return 'Consultei seus compromissos no Google Agenda: Você possui 2 eventos confirmados para hoje (Reunião de Arquitetura às 14:00 e Revisão dos Sistemas às 16:30).';
+      return 'Consultei sua agenda no Google Calendar: você possui 2 eventos confirmados para hoje.';
     }
     if (q.includes('spotify') || q.includes('música') || q.includes('tocar') || q.includes('play')) {
-      return 'Conector do Spotify atualizado. Reproduzindo sua playlist no player integrado.';
+      return 'Player do Spotify conectado. Reproduzindo sua playlist agora.';
     }
     if (q.includes('email') || q.includes('gmail') || q.includes('inbox') || q.includes('mensagem')) {
-      return 'Caixa de entrada do Gmail verificada: Você possui mensagens recentes sobre telemetria e atualizações de segurança.';
+      return 'Verifiquei sua caixa de entrada no Gmail: você possui novas mensagens recentes.';
     }
     if (q.includes('rede') || q.includes('scanner') || q.includes('dispositivo') || q.includes('ip') || q.includes('wifi')) {
-      return 'Varredura de rede local concluída: Os adaptadores de rede e nós locais estão com latência nominal e sem anomalias.';
+      return 'Varredura da sua rede local concluída: todos os adaptadores e nós locais estão com latência nominal.';
     }
     if (q.includes('clima') || q.includes('tempo') || q.includes('temperatura') || q.includes('chover')) {
-      return 'Clima atual verificado: Temperatura em torno de 24°C, céu com poucas nuvens e condições estáveis.';
+      return 'Verifiquei o clima para você: temperatura em torno de 24°C, céu limpo e condições estáveis.';
     }
     if (q.includes('que horas são') || q.includes('horas') || q.includes('data')) {
       const now = new Date();
       return `Agora são exatamente ${now.getHours()} horas e ${now.getMinutes()} minutos.`;
     }
-    return `Instrução compreendida e processada pelo núcleo da Sexta-Feira: "${query}". Sistemas prontos para a próxima diretriz.`;
+    return `Entendi sua instrução: "${query}". Já estou processando e pronta para a próxima diretriz.`;
   };
 
   const handleCommandDetected = async (command: string) => {
@@ -78,7 +78,7 @@ export const App: React.FC = () => {
 
     const q = command.toLowerCase().trim();
     // Fast path: Resposta local instantânea (<20ms) para comandos conversacionais comuns
-    const isInstantIntent = 
+    const isInstantIntent =
       !q || q === 'sexta feira' || q === 'sexta-feira' || q === 'friday' || q === 'ei sexta' ||
       q.includes('olá') || q.includes('ola') || q.includes('oi') || q.includes('bom dia') || q.includes('boa tarde') || q.includes('boa noite') ||
       q.includes('como você está') || q.includes('tudo bem') || q.includes('tudo bom') ||
