@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SextaFeira.Domain.Agent;
@@ -62,10 +63,10 @@ public sealed class WhisperSpeechToText : ISpeechToText, IHostedService, IDispos
         for (var i = 0; i < samples.Length; i++)
             samples[i] = (short)(span[2 * i] | (span[2 * i + 1] << 8)) / 32768f;
 
-        var sw = Stopwatch.StartNew();
         var text = new StringBuilder();
         double maxNoSpeech = 0;
         await _lock.WaitAsync(ct);
+        var sw = Stopwatch.StartNew(); // mede só a transcrição, não a espera pelo lock
         try
         {
             // O Whisper codifica sempre uma janela fixa; para frases curtas, uma janela menor é bem mais rápida.
@@ -94,7 +95,7 @@ public sealed class WhisperSpeechToText : ISpeechToText, IHostedService, IDispos
         if (_processors.TryGetValue(ctx, out var p)) return p;
         var builder = _factory!.CreateBuilder()
             .WithLanguage("pt")
-            .WithPrompt("Sexta-Feira, assistente pessoal. Conversa em português do Brasil.")
+            .WithPrompt(Prompt)
             .WithNoContext()
             .WithSingleSegment()
             .WithThreads(Math.Max(2, Environment.ProcessorCount / 2));
@@ -104,10 +105,17 @@ public sealed class WhisperSpeechToText : ISpeechToText, IHostedService, IDispos
         return p;
     }
 
+    private const string Prompt = "Sexta-Feira, assistente pessoal. Conversa em português do Brasil.";
+
     private static bool IsHallucination(string text)
     {
         var t = text.Trim().ToLowerInvariant();
         if (t.Length == 0) return true;
+        // Descrições de som ("[MÚSICA DE FUNDO]", "(risos)", "*tosse*") não são fala.
+        var withoutTags = Regex.Replace(t, @"\[[^\]]*\]|\([^)]*\)|\*[^*]*\*|♪", "").Trim(' ', '.', ',', '!', '?', '-');
+        if (withoutTags.Length == 0) return true;
+        // Em silêncio o Whisper às vezes "lê" o próprio texto-guia.
+        if (Prompt.ToLowerInvariant().Contains(t.TrimEnd('.', '!', ' '))) return true;
         return Hallucinations.Any(h => t == h || (h.Length > 12 && t.Contains(h)));
     }
 

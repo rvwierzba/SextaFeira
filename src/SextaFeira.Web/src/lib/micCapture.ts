@@ -10,6 +10,7 @@
 const TARGET_RATE = 16000;
 const FRAME_MS = 20;
 const FRAME_SAMPLES = (TARGET_RATE * FRAME_MS) / 1000; // 320
+const HISTORY_FRAMES = 150; // ~3 s para estimar o ruído de fundo
 
 export interface MicCaptureOptions {
   onUtterance: (pcm16: Int16Array, durationMs: number) => void;
@@ -61,6 +62,7 @@ export class MicCapture {
   private source: MediaStreamAudioSourceNode | null = null;
 
   private noiseFloor = 0.004;
+  private history: number[] = [];
   private speaking = false;
   private speechFrames = 0;
   private silenceFrames = 0;
@@ -70,7 +72,7 @@ export class MicCapture {
   private readonly opts: Required<Omit<MicCaptureOptions, 'onSpeechStart' | 'onLevel' | 'isAssistantSpeaking'>> & MicCaptureOptions;
 
   constructor(options: MicCaptureOptions) {
-    this.opts = { endSilenceMs: 800, maxUtteranceMs: 20000, ...options };
+    this.opts = { endSilenceMs: 800, maxUtteranceMs: 15000, ...options };
   }
 
   get active() { return this.ctx !== null; }
@@ -126,21 +128,33 @@ export class MicCapture {
     const rms = Math.sqrt(sum / frame.length);
     this.opts.onLevel?.(Math.min(1, rms * 12));
 
+    // Piso de ruído = nível típico (percentil 30) dos últimos ~3 s, medido SEMPRE.
+    // Som contínuo (música, TV, ventilador) eleva o piso; só uma voz acima do ambiente dispara.
+    // Durante a fala o piso fica congelado (senão a própria voz o elevaria), salvo se "falar" por
+    // mais de 6 s seguidos, o que quase sempre é música/vídeo de fundo.
+    const longRun = this.speaking && this.current.length * FRAME_MS > 6000;
+    if (!this.speaking || longRun) {
+      this.history.push(rms);
+      if (this.history.length > HISTORY_FRAMES) this.history.shift();
+    }
+    if ((!this.speaking || longRun) && this.history.length % 10 === 0) {
+      const sorted = [...this.history].sort((a, b) => a - b);
+      this.noiseFloor = Math.max(0.002, sorted[Math.floor(sorted.length * 0.3)]);
+    }
+
     const assistantTalking = this.opts.isAssistantSpeaking?.() ?? false;
     // Limiar: bem acima do ruído de fundo; mais alto ainda enquanto a assistente fala (eco do alto-falante).
-    const factor = assistantTalking ? 6 : 3;
-    const minAbs = assistantTalking ? 0.03 : 0.012;
+    const factor = assistantTalking ? 6 : 3.5;
+    const minAbs = assistantTalking ? 0.035 : 0.015;
     const threshold = Math.max(this.noiseFloor * factor, minAbs);
     const isVoice = rms > threshold;
 
     if (!this.speaking) {
-      // Atualiza o piso de ruído só quando não há fala.
-      if (!isVoice) this.noiseFloor = this.noiseFloor * 0.95 + rms * 0.05;
       this.preRoll.push(frame);
       if (this.preRoll.length > this.preRollFrames) this.preRoll.shift();
 
       this.speechFrames = isVoice ? this.speechFrames + 1 : 0;
-      if (this.speechFrames >= 3) { // 60 ms de voz contínua
+      if (this.speechFrames >= 5) { // 100 ms de voz contínua (ignora estalos e batidas)
         this.speaking = true;
         this.silenceFrames = 0;
         this.current = [...this.preRoll];

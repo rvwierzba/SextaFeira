@@ -383,3 +383,5 @@ body {
 }
 .hud-dock-wing { top: 68px; bottom: 112px; }
 .hud-dock-right.collapsed { opacity: 0; }
+/* "clip" impede qualquer rolagem programática do HUD (ex.: foco em elementos fora da tela). */
+html, body, #root, .hud-viewport { overflow: clip; }

@@ -5,8 +5,9 @@ import type { LogEntry } from '../../hooks/useAssistant';
 
 /** Histórico real da conversa: falas, ferramentas usadas e falas ignoradas (sem palavra de ativação). */
 export const ConversationLog: React.FC<{ entries: LogEntry[]; onClear: () => void }> = ({ entries, onClear }) => {
-  const endRef = useRef<HTMLDivElement>(null);
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [entries]);
+  // Rola só a lista (scrollIntoView rolaria a página inteira e deslocaria o HUD para o lado).
+  const listRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { const el = listRef.current; if (el) el.scrollTop = el.scrollHeight; }, [entries]);
 
   const icon = (e: LogEntry) => {
     switch (e.kind) {
@@ -24,7 +25,7 @@ export const ConversationLog: React.FC<{ entries: LogEntry[]; onClear: () => voi
         <span>CONVERSA</span>
         <button onClick={onClear} style={{ background: 'none', border: 'none', color: '#7fa8c0', cursor: 'pointer', fontSize: '0.7rem' }}>LIMPAR</button>
       </div>
-      <div className="hud-console" style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6, fontFamily: 'var(--hud-font-rajdhani)', fontSize: '0.9rem' }}>
+      <div ref={listRef} className="hud-console" style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6, fontFamily: 'var(--hud-font-rajdhani)', fontSize: '0.9rem' }}>
         {entries.length === 0 && <div style={{ color: '#55708a' }}>Nada por aqui ainda.</div>}
         {entries.map(e => (
           <div key={e.id} style={{ display: 'flex', gap: 8, opacity: e.kind === 'ignored' ? 0.55 : 1 }}>
@@ -41,7 +42,6 @@ export const ConversationLog: React.FC<{ entries: LogEntry[]; onClear: () => voi
             </div>
           </div>
         ))}
-        <div ref={endRef} />
       </div>
     </div>
   );

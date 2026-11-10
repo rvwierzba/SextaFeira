@@ -130,7 +130,9 @@ public sealed class McpManager : IToolProvider, IHostedService, IAsyncDisposable
                     OAuth = new ClientOAuthOptions
                     {
                         RedirectUri = new Uri($"http://localhost:{OAuthCallbackPort}/callback"),
+#pragma warning disable MCP9007 // O substituto (AuthorizationCallbackHandler) ainda muda entre versões do SDK; o fluxo atual funciona.
                         AuthorizationRedirectDelegate = (authUri, redirectUri, token) => HandleBrowserLoginAsync(conn, authUri, redirectUri, token),
+#pragma warning restore MCP9007
                         DynamicClientRegistration = new() { ClientName = "Sexta-Feira" },
                         TokenCache = new FileTokenCache(Path.Combine(DataPaths.McpTokens, Sanitize(name) + ".json")),
                     },

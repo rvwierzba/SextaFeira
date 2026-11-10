@@ -62,6 +62,7 @@ public sealed class AssistantSessionService
     public async Task UnregisterAsync(string connectionId)
     {
         _devices.TryRemove(connectionId, out _);
+        _slots.TryRemove(connectionId, out _);
         await BroadcastDevicesAsync();
     }
 
@@ -82,10 +83,43 @@ public sealed class AssistantSessionService
 
     // ── Entrada ──────────────────────────────────────────────────────────────
 
+    // Fila por dispositivo com "a mais recente vence": enquanto uma fala é transcrita, só a última que chegar
+    // fica esperando. Evita acumular minutos de atraso quando há ruído/mídia de fundo.
+    private sealed class UtteranceSlot { public bool Busy; public byte[]? Pending; }
+    private readonly ConcurrentDictionary<string, UtteranceSlot> _slots = new();
+
     public async Task HandleUtteranceAsync(string connectionId, byte[] pcm16)
     {
-        if (!_devices.TryGetValue(connectionId, out var device)) return;
         if (pcm16.Length < MinUtteranceBytes) return;
+        var slot = _slots.GetOrAdd(connectionId, _ => new UtteranceSlot());
+        lock (slot)
+        {
+            if (slot.Busy)
+            {
+                if (slot.Pending != null) _logger.LogDebug("Descartando fala antiga pendente de {Connection}", connectionId);
+                slot.Pending = pcm16;
+                return;
+            }
+            slot.Busy = true;
+        }
+
+        var next = pcm16;
+        while (next != null)
+        {
+            try { await ProcessUtteranceAsync(connectionId, next); }
+            catch (Exception ex) { _logger.LogWarning(ex, "Falha ao processar fala"); }
+            lock (slot)
+            {
+                next = slot.Pending;
+                slot.Pending = null;
+                if (next == null) slot.Busy = false;
+            }
+        }
+    }
+
+    private async Task ProcessUtteranceAsync(string connectionId, byte[] pcm16)
+    {
+        if (!_devices.TryGetValue(connectionId, out var device)) return;
 
         if (!_stt.IsReady)
         {

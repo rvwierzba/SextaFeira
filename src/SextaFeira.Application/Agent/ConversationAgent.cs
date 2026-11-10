@@ -189,7 +189,7 @@ public sealed class ConversationAgent
             if (finished) break;
             if (spokenText.Length > 0 && !char.IsWhiteSpace(spokenText[^1])) spokenText.Append(' ');
 
-            foreach (var call in toolCalls)
+            foreach (var call in toolCalls!)
             {
                 yield return new AgentStatus("EXECUTING", $"Usando {call.Name}...");
                 yield return new AgentToolStarted(call.Name, call.ArgumentsJson);
