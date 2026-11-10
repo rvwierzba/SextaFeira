@@ -25,6 +25,7 @@ export const useVoiceEngine = ({ onCommandDetected, onStateChange }: UseVoiceEng
   const currentUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
   const isFallbackRecordingRef = useRef(false);
+  const isSpeakingRef = useRef(false);
 
   // Carregar e indexar vozes do navegador
   useEffect(() => {
@@ -87,17 +88,19 @@ export const useVoiceEngine = ({ onCommandDetected, onStateChange }: UseVoiceEng
           const level = Math.min(1.0, (avg / 255) * 1.85);
           setAudioLevel(level);
 
-          // VAD para Firefox / MediaRecorder fallback quando a energia da voz oscila
-          if (isFallbackRecordingRef.current) {
+          // VAD do gravador MediaRecorder (Firefox fallback)
+          if (isFallbackRecordingRef.current && !isSpeakingRef.current) {
             if (level > 0.08) {
+              // Usuário está falando: cancela temporizador de silêncio
               if (silenceTimerRef.current) {
                 clearTimeout(silenceTimerRef.current);
                 silenceTimerRef.current = null;
               }
-            } else if (level <= 0.05 && recordedChunksRef.current.length > 0 && !silenceTimerRef.current) {
+            } else if (level <= 0.05 && recordedChunksRef.current.length > 2 && !silenceTimerRef.current) {
+              // Pausa natural de 1.4s após falar antes de finalizar
               silenceTimerRef.current = setTimeout(() => {
                 stopAndProcessFallbackAudio();
-              }, 650);
+              }, 1400);
             }
           }
         }
@@ -144,17 +147,24 @@ export const useVoiceEngine = ({ onCommandDetected, onStateChange }: UseVoiceEng
       silenceTimerRef.current = null;
     }
 
+    // Se a assistente já estiver falando, ignora ecos
+    if (isSpeakingRef.current) {
+      accumulatedTranscriptRef.current = '';
+      setInterimTranscript('');
+      return;
+    }
+
     const cleaned = cleanTranscriptCommand(rawText);
     accumulatedTranscriptRef.current = '';
     setInterimTranscript('');
 
     if (cleaned.length >= 2) {
-      console.log('🎙️ [VOICE ENGINE] Comando disparado instantaneamente:', cleaned);
+      console.log('🎙️ [VOICE ENGINE] Comando completo capturado:', cleaned);
       onCommandDetected(cleaned);
     }
   }, [onCommandDetected]);
 
-  // Fallback para Firefox ou navegadores quando Web Speech não está disponível
+  // Fallback MediaRecorder para navegadores sem Web Speech
   const startMediaRecorderFallback = useCallback(async (stream: MediaStream) => {
     try {
       recordedChunksRef.current = [];
@@ -166,18 +176,18 @@ export const useVoiceEngine = ({ onCommandDetected, onStateChange }: UseVoiceEng
 
       const recorder = new MediaRecorder(stream, { mimeType });
       recorder.ondataavailable = (event) => {
-        if (event.data && event.data.size > 0) {
+        if (event.data && event.data.size > 0 && !isSpeakingRef.current) {
           recordedChunksRef.current.push(event.data);
         }
       };
 
-      recorder.start(100);
+      recorder.start(250);
       mediaRecorderRef.current = recorder;
       isFallbackRecordingRef.current = true;
       setIsListening(true);
       isListeningRef.current = true;
       onStateChange('LISTENING');
-      setInterimTranscript('Ouvindo áudio via microfone...');
+      setInterimTranscript('Ouvindo você falar...');
     } catch (err) {
       console.warn('Erro ao iniciar MediaRecorder fallback:', err);
     }
@@ -185,17 +195,27 @@ export const useVoiceEngine = ({ onCommandDetected, onStateChange }: UseVoiceEng
 
   const stopAndProcessFallbackAudio = useCallback(async () => {
     if (!mediaRecorderRef.current || mediaRecorderRef.current.state === 'inactive') return;
+    if (isSpeakingRef.current) return;
 
     try {
       mediaRecorderRef.current.stop();
       isFallbackRecordingRef.current = false;
+
+      // Se a gravação foi minúscula (< 4 chunks), descarta sem enviar
+      if (recordedChunksRef.current.length < 3) {
+        recordedChunksRef.current = [];
+        if (isListeningRef.current && mediaStreamRef.current) {
+          startMediaRecorderFallback(mediaStreamRef.current);
+        }
+        return;
+      }
+
       onStateChange('THINKING');
-      setInterimTranscript('Processando voz...');
+      setInterimTranscript('Processando fala...');
 
       const audioBlob = new Blob(recordedChunksRef.current, { type: 'audio/webm' });
       recordedChunksRef.current = [];
 
-      // Converter Blob em Base64
       const reader = new FileReader();
       reader.onloadend = async () => {
         const base64Audio = (reader.result as string)?.split(',')[1];
@@ -209,7 +229,7 @@ export const useVoiceEngine = ({ onCommandDetected, onStateChange }: UseVoiceEng
 
             if (res.ok) {
               const data = await res.json();
-              if (data.transcript && data.transcript.trim().length > 0) {
+              if (data.transcript && data.transcript.trim().length >= 2) {
                 dispatchCommand(data.transcript);
                 return;
               }
@@ -219,25 +239,27 @@ export const useVoiceEngine = ({ onCommandDetected, onStateChange }: UseVoiceEng
           }
         }
 
-        // Se backend não respondeu STT, envia comando padrão
-        dispatchCommand('Sexta-feira, status do sistema');
+        // Se não conseguiu transcrever, retorna silenciosamente ao modo de escuta
+        if (isListeningRef.current && mediaStreamRef.current && !isSpeakingRef.current) {
+          startMediaRecorderFallback(mediaStreamRef.current);
+        }
       };
       reader.readAsDataURL(audioBlob);
 
       // Reinicia gravação contínua se ainda estiver ouvindo
       if (isListeningRef.current && mediaStreamRef.current) {
         setTimeout(() => {
-          if (isListeningRef.current && mediaStreamRef.current) {
+          if (isListeningRef.current && mediaStreamRef.current && !isSpeakingRef.current) {
             startMediaRecorderFallback(mediaStreamRef.current);
           }
-        }, 800);
+        }, 1200);
       }
     } catch (err) {
       console.warn('Erro ao processar áudio fallback:', err);
     }
   }, [dispatchCommand, onStateChange, startMediaRecorderFallback]);
 
-  // Inicializar Reconhecimento Contínuo Ultra-Rápido
+  // Inicializar Reconhecimento Contínuo Sem Cortes Prematuros
   const startVoiceRecognition = useCallback(async () => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
@@ -246,7 +268,7 @@ export const useVoiceEngine = ({ onCommandDetected, onStateChange }: UseVoiceEng
       if (!stream) return;
 
       if (!SpeechRecognition) {
-        console.log('🎙️ [VOICE ENGINE] Usando modo de captura de áudio direto para Firefox...');
+        console.log('🎙️ [VOICE ENGINE] Usando modo de escuta direta (Firefox)...');
         await startMediaRecorderFallback(stream);
         return;
       }
@@ -265,10 +287,15 @@ export const useVoiceEngine = ({ onCommandDetected, onStateChange }: UseVoiceEng
         isListeningRef.current = true;
         setIsListening(true);
         onStateChange('LISTENING');
-        console.log('🎙️ [VOICE ENGINE] Reconhecimento ativo e escutando (PT-BR).');
+        console.log('🎙️ [VOICE ENGINE] Reconhecimento ativo contínuo (PT-BR).');
       };
 
       recognition.onresult = (event: any) => {
+        // Se a Sexta-Feira estiver falando, não processe áudio para evitar eco/interrupção
+        if (isSpeakingRef.current) {
+          return;
+        }
+
         let currentInterim = '';
         let currentFinal = '';
 
@@ -287,51 +314,44 @@ export const useVoiceEngine = ({ onCommandDetected, onStateChange }: UseVoiceEng
           accumulatedTranscriptRef.current = currentSpeech;
           setInterimTranscript(currentSpeech);
 
-          // Se a API Web Speech já marcou como final, dispara imediatamente com ZERO espera!
-          if (currentFinal.trim().length >= 2) {
-            dispatchCommand(currentFinal);
-            return;
-          }
-
-          // Voice Activity Detection (VAD) ultra ágil: 650ms de pausa para velocidade instantânea
+          // Temporizador de silêncio natural de 1.4s (tempo humano de pausa entre palavras)
+          // NÃO corta a fala no primeiro chunk ou na primeira palavra!
           if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
           silenceTimerRef.current = setTimeout(() => {
-            if (accumulatedTranscriptRef.current.trim().length >= 2) {
+            if (accumulatedTranscriptRef.current.trim().length >= 2 && !isSpeakingRef.current) {
               dispatchCommand(accumulatedTranscriptRef.current);
             }
-          }, 650);
+          }, 1400);
         }
       };
 
+      // onspeechend NÃO deve disparar comando prematuro pois navegadores acionam entre pausas breves
       recognition.onspeechend = () => {
-        if (accumulatedTranscriptRef.current.trim().length >= 2) {
-          dispatchCommand(accumulatedTranscriptRef.current);
-        }
+        // Apenas permite que o timer de 1.4s conclua naturalmente
       };
 
       recognition.onerror = (event: any) => {
         if (event.error === 'no-speech') return;
         console.warn('⚠️ [VOICE ENGINE] Evento SpeechRecognition:', event.error);
         if (event.error === 'network' || event.error === 'service-not-allowed') {
-          // Fallback gracioso para áudio gravado caso serviço de nuvem do browser bloqueie
-          if (mediaStreamRef.current) {
+          if (mediaStreamRef.current && !isFallbackRecordingRef.current) {
             startMediaRecorderFallback(mediaStreamRef.current);
           }
         }
       };
 
       recognition.onend = () => {
-        if (isListeningRef.current) {
+        if (isListeningRef.current && !isSpeakingRef.current) {
           setTimeout(() => {
-            if (isListeningRef.current) {
+            if (isListeningRef.current && !isSpeakingRef.current) {
               try {
                 recognition.start();
               } catch (e) {
                 // já ativo
               }
             }
-          }, 80);
-        } else {
+          }, 150);
+        } else if (!isSpeakingRef.current) {
           setIsListening(false);
         }
       };
@@ -341,7 +361,7 @@ export const useVoiceEngine = ({ onCommandDetected, onStateChange }: UseVoiceEng
       isListeningRef.current = true;
       setIsListening(true);
     } catch (err) {
-      console.warn('Tentando fallback de captura para Firefox/Browser:', err);
+      console.warn('Fallback para escuta de áudio (Firefox):', err);
       if (mediaStreamRef.current) {
         await startMediaRecorderFallback(mediaStreamRef.current);
       }
@@ -377,7 +397,7 @@ export const useVoiceEngine = ({ onCommandDetected, onStateChange }: UseVoiceEng
     onStateChange('IDLE');
   }, [onStateChange]);
 
-  // Síntese de Voz (TTS) com voz feminina prioritária e velocidade dinâmica (1.25x)
+  // Síntese de Voz (TTS) com voz estritamente FEMININA e BRASILEIRA (PT-BR)
   const speakResponse = useCallback((text: string) => {
     if (!('speechSynthesis' in window)) {
       console.warn('speechSynthesis não suportado');
@@ -393,18 +413,22 @@ export const useVoiceEngine = ({ onCommandDetected, onStateChange }: UseVoiceEng
 
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'pt-BR';
-      // Cadência ágil, rápida e moderna (1.25x)
-      utterance.rate = 1.25;
-      // Pitch afinado para timbre feminino límpido e agradável
-      utterance.pitch = 1.10;
+      // Cadência natural e brasileira (1.12x)
+      utterance.rate = 1.12;
+      // Pitch natural (1.0) para preservar o sotaque brasileiro autêntico da Maria/Francisca
+      utterance.pitch = 1.0;
       utterance.volume = 1.0;
 
       // Obter vozes instaladas no sistema e navegador
       const voices = voicesRef.current.length > 0 ? voicesRef.current : window.speechSynthesis.getVoices();
 
-      const isPt = (v: SpeechSynthesisVoice) => {
-        const lang = (v.lang || '').toLowerCase();
-        return lang.includes('pt-br') || lang.includes('pt_br') || lang.startsWith('pt');
+      // Filtro rigoroso: DEVE ser Português do BRASIL (pt-BR) e NUNCA Portugal (pt-PT)
+      const isStrictlyPtBr = (v: SpeechSynthesisVoice) => {
+        const lang = (v.lang || '').toLowerCase().replace('_', '-');
+        const name = (v.name || '').toLowerCase();
+        const isBr = lang.includes('pt-br') || name.includes('brazil') || name.includes('brasil');
+        const isPtPt = lang.includes('pt-pt') || name.includes('portugal') || name.includes('helena') || name.includes('fernanda') || name.includes('raquel');
+        return isBr && !isPtPt;
       };
 
       const isMale = (v: SpeechSynthesisVoice) => {
@@ -415,68 +439,72 @@ export const useVoiceEngine = ({ onCommandDetected, onStateChange }: UseVoiceEng
                name.includes('fabio') || name.includes('fábio');
       };
 
-      // Prioridade rigorosa de vozes femininas brasileiras
-      const femaleKeywords = [
-        'francisca', // Microsoft Francisca Online (Natural) - Portuguese (Brazil) - Excelente
-        'maria',     // Microsoft Maria - Portuguese (Brazil)
-        'leticia',   // Microsoft Leticia
+      // Nomes de vozes femininas exclusivamente Brasileiras (pt-BR)
+      const ptBrFemaleKeywords = [
+        'maria',     // Microsoft Maria Desktop / Microsoft Maria - pt-BR nativa do Windows!
+        'francisca', // Microsoft Francisca Online (Natural) - pt-BR
+        'leticia',   // Microsoft Leticia - pt-BR
         'letícia',
-        'luciana',   // Luciana
-        'helena',
-        'yara',
-        'vitória',
+        'luciana',   // Luciana - pt-BR
+        'vitória',   // Vitoria - pt-BR
         'vitoria',
-        'fernanda',
-        'google português do brasil', // Padrão feminina do Chrome
-        'female',
-        'mulher',
-        'zira'
+        'google português do brasil' // Google pt-BR
       ];
 
       let selectedVoice: SpeechSynthesisVoice | undefined;
 
-      // 1. Busca por nome específico feminino pt-BR
-      for (const kw of femaleKeywords) {
-        selectedVoice = voices.find(v => isPt(v) && v.name.toLowerCase().includes(kw) && !isMale(v));
+      // 1. Busca por nome específico feminino BRASILEIRO
+      for (const kw of ptBrFemaleKeywords) {
+        selectedVoice = voices.find(v => isStrictlyPtBr(v) && v.name.toLowerCase().includes(kw) && !isMale(v));
         if (selectedVoice) break;
       }
 
-      // 2. Qualquer pt-BR que não seja masculina
+      // 2. Qualquer voz pt-BR feminina ou neutra
       if (!selectedVoice) {
-        selectedVoice = voices.find(v => isPt(v) && !isMale(v));
+        selectedVoice = voices.find(v => isStrictlyPtBr(v) && !isMale(v));
       }
 
-      // 3. Fallback genérico pt
+      // 3. Qualquer pt-BR (sem ser Portugal)
       if (!selectedVoice) {
-        selectedVoice = voices.find(v => isPt(v));
+        selectedVoice = voices.find(v => isStrictlyPtBr(v));
       }
 
       if (selectedVoice) {
         utterance.voice = selectedVoice;
-        console.log('🎙️ [VOICE ENGINE] Voz feminina selecionada:', selectedVoice.name, 'Rate:', utterance.rate);
+        console.log('🎙️ [VOICE ENGINE] Voz PT-BR Selecionada:', selectedVoice.name, selectedVoice.lang);
       }
 
       currentUtteranceRef.current = utterance;
 
       utterance.onstart = () => {
+        isSpeakingRef.current = true;
         onStateChange('SPEAKING');
         setAudioLevel(0.68);
       };
 
       utterance.onend = () => {
+        isSpeakingRef.current = false;
         currentUtteranceRef.current = null;
         onStateChange('IDLE');
         setAudioLevel(0.05);
+
+        // Retoma o reconhecimento de voz suavemente após ela terminar de falar
+        if (isListeningRef.current && recognitionRef.current) {
+          try {
+            recognitionRef.current.start();
+          } catch {}
+        }
       };
 
       utterance.onerror = (e) => {
         console.warn('Aviso na síntese vocal:', e);
+        isSpeakingRef.current = false;
         currentUtteranceRef.current = null;
         onStateChange('IDLE');
         setAudioLevel(0.05);
       };
 
-      // Workaround para browsers Chromium/Firefox mantendo áudio ativo
+      // Workaround para browsers mantendo áudio ativo sem congelar
       const resumeInterval = setInterval(() => {
         if (!window.speechSynthesis.speaking) {
           clearInterval(resumeInterval);
@@ -488,6 +516,7 @@ export const useVoiceEngine = ({ onCommandDetected, onStateChange }: UseVoiceEng
       window.speechSynthesis.speak(utterance);
     } catch (err) {
       console.warn('Erro ao disparar fala:', err);
+      isSpeakingRef.current = false;
       onStateChange('IDLE');
     }
   }, [onStateChange]);
