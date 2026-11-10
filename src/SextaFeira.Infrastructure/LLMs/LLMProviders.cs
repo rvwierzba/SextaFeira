@@ -19,6 +19,7 @@ public class OllamaLocalFallbackProvider : ILLMProvider
 
     public LLMProviderType ProviderType => LLMProviderType.OllamaLocal;
     public string DefaultModelName { get; }
+    private string? _resolvedModelName;
 
     public OllamaLocalFallbackProvider(HttpClient httpClient, IConfiguration configuration, ILogger<OllamaLocalFallbackProvider> logger)
     {
@@ -26,6 +27,42 @@ public class OllamaLocalFallbackProvider : ILLMProvider
         _logger = logger;
         _baseUrl = configuration["Ollama:BaseUrl"] ?? "http://localhost:11434";
         DefaultModelName = configuration["Ollama:Model"] ?? "phi3:mini";
+    }
+
+    private async Task<string> GetEffectiveModelNameAsync(CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(_resolvedModelName)) return _resolvedModelName;
+
+        try
+        {
+            var response = await _httpClient.GetAsync($"{_baseUrl}/api/tags", cancellationToken);
+            if (response.IsSuccessStatusCode)
+            {
+                using var jsonDoc = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
+                if (jsonDoc.RootElement.TryGetProperty("models", out var models) && models.GetArrayLength() > 0)
+                {
+                    foreach (var model in models.EnumerateArray())
+                    {
+                        var name = model.GetProperty("name").GetString();
+                        if (!string.IsNullOrEmpty(name))
+                        {
+                            if (name.Contains("llama3") || name.Contains("qwen") || name.Contains("phi4"))
+                            {
+                                _resolvedModelName = name;
+                                _logger.LogInformation("Modelo Ollama ativo detectado: {ModelName}", _resolvedModelName);
+                                return _resolvedModelName;
+                            }
+                        }
+                    }
+                    _resolvedModelName = models[0].GetProperty("name").GetString() ?? DefaultModelName;
+                    return _resolvedModelName;
+                }
+            }
+        }
+        catch { }
+
+        _resolvedModelName = DefaultModelName;
+        return _resolvedModelName;
     }
 
     public async Task<bool> IsHealthyAsync(CancellationToken cancellationToken = default)
@@ -45,9 +82,10 @@ public class OllamaLocalFallbackProvider : ILLMProvider
     {
         try
         {
+            var modelToUse = await GetEffectiveModelNameAsync(cancellationToken);
             var payload = new
             {
-                model = DefaultModelName,
+                model = modelToUse,
                 prompt = request.Prompt,
                 system = request.SystemPrompt,
                 stream = false,
@@ -59,7 +97,7 @@ public class OllamaLocalFallbackProvider : ILLMProvider
             {
                 var json = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: cancellationToken);
                 var responseText = json.GetProperty("response").GetString() ?? "Sem resposta.";
-                return new LLMResponse(responseText, ProviderType, DefaultModelName, 50, 100);
+                return new LLMResponse(responseText, ProviderType, modelToUse, 50, 100);
             }
         }
         catch (Exception ex)

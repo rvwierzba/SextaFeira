@@ -187,7 +187,7 @@ export const HologramCoreCanvas: React.FC<HologramCoreCanvasProps> = ({ state, a
 
         // Harmonic spherical soundwave deformation
         const harmonicWave = Math.sin(theta * 4 + elapsedTime * waveFrequency) *
-                             Math.cos(phi * 3 - elapsedTime * (waveFrequency * 0.8));
+          Math.cos(phi * 3 - elapsedTime * (waveFrequency * 0.8));
 
         const displacement = 1.0 + (harmonicWave * waveAmplitude);
 

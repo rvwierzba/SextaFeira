@@ -54,6 +54,48 @@ public class CoreController : ControllerBase
         return Ok(response);
     }
 
+    [HttpPost("transcribe")]
+    public async Task<IActionResult> TranscribeAudio([FromBody] TranscribeAudioRequest request, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.AudioBase64))
+        {
+            return BadRequest(new { error = "O campo audioBase64 é obrigatório." });
+        }
+
+        try
+        {
+            var audioBytes = Convert.FromBase64String(request.AudioBase64);
+            var transcript = await _voiceEngine.TranscribeAudioAsync(audioBytes, request.Language ?? "pt-BR", cancellationToken);
+            return Ok(new { transcript });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { error = "Erro ao transcrever áudio", details = ex.Message });
+        }
+    }
+
+    [HttpPost("transcribe-file")]
+    public async Task<IActionResult> TranscribeAudioFile([FromForm] IFormFile file, [FromForm] string? language = "pt-BR", CancellationToken cancellationToken = default)
+    {
+        if (file == null || file.Length == 0)
+        {
+            return BadRequest(new { error = "Arquivo de áudio não fornecido." });
+        }
+
+        try
+        {
+            using var ms = new MemoryStream();
+            await file.CopyToAsync(ms, cancellationToken);
+            var audioBytes = ms.ToArray();
+            var transcript = await _voiceEngine.TranscribeAudioAsync(audioBytes, language ?? "pt-BR", cancellationToken);
+            return Ok(new { transcript });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { error = "Erro ao transcrever arquivo de áudio", details = ex.Message });
+        }
+    }
+
     [HttpGet("status")]
     public async Task<IActionResult> GetSystemStatus(CancellationToken cancellationToken)
     {
@@ -104,6 +146,7 @@ public class CoreController : ControllerBase
 }
 
 public record SetApiKeyRequest(string ApiKey);
+public record TranscribeAudioRequest(string? AudioBase64, string? MimeType = "audio/webm", string? Language = "pt-BR");
 
 [ApiController]
 [Route("api/[controller]")]

@@ -73,16 +73,34 @@ export const App: React.FC = () => {
   const handleCommandDetected = async (command: string) => {
     setLastUserSpeech(command);
     setAgentState('THINKING');
-    setStatusMessage(`Processando: "${command}"...`);
+    setStatusMessage(`Processando diretriz: "${command}"...`);
     addConsoleLog(`[OPERADOR] "${command}"`);
+
+    const q = command.toLowerCase().trim();
+    // Fast path: Resposta local instantânea (<20ms) para comandos conversacionais comuns
+    const isInstantIntent = 
+      !q || q === 'sexta feira' || q === 'sexta-feira' || q === 'friday' || q === 'ei sexta' ||
+      q.includes('olá') || q.includes('ola') || q.includes('oi') || q.includes('bom dia') || q.includes('boa tarde') || q.includes('boa noite') ||
+      q.includes('como você está') || q.includes('tudo bem') || q.includes('tudo bom') ||
+      q.includes('quem é você') || q.includes('quem e voce') || q.includes('o que você faz') ||
+      q.includes('status') || q.includes('horas') || q.includes('data');
+
+    if (isInstantIntent) {
+      const instantResponse = generateLocalResponse(command);
+      setLastAiResponse(instantResponse);
+      addConsoleLog(`[SEXTA-FEIRA] ${instantResponse}`);
+      setStatusMessage(`Respondendo: ${instantResponse.substring(0, 50)}...`);
+      speakResponse(instantResponse);
+      return;
+    }
 
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      // Timeout reduzido para 2200ms para evitar qualquer sensação de lentidão
+      const timeoutId = setTimeout(() => controller.abort(), 2200);
 
       let textResponse = '';
 
-      // Tenta rota /api/core/process ou /api/openjarvis/execute-fast no backend
       const response = await fetch('http://localhost:5000/api/core/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -99,7 +117,6 @@ export const App: React.FC = () => {
         const data = await response.json();
         textResponse = data.textResponse || generateLocalResponse(command);
       } else {
-        // Fallback autônomo imediato do motor local
         textResponse = generateLocalResponse(command);
       }
 
@@ -108,7 +125,7 @@ export const App: React.FC = () => {
       setStatusMessage(`Respondendo: ${textResponse.substring(0, 50)}...`);
       speakResponse(textResponse);
     } catch (err) {
-      console.warn('Erro ao processar comando:', err);
+      console.warn('Erro ao processar comando, usando fallback imediato:', err);
       const fallbackMsg = generateLocalResponse(command);
       setLastAiResponse(fallbackMsg);
       addConsoleLog(`[SEXTA-FEIRA] ${fallbackMsg}`);

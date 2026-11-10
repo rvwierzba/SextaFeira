@@ -163,3 +163,4 @@ export const VoiceCapsulePill: React.FC<VoiceCapsulePillProps> = ({
     </div>
   );
 };
+
