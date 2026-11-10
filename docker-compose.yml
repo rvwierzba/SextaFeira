@@ -1,0 +1,52 @@
+# Sexta-Feira em Docker — para servidores Linux, NAS, mini PCs etc.
+#
+#   docker compose up -d                                     # usa o Ollama instalado no host
+#   OLLAMA_URL=http://ollama:11434 docker compose --profile ollama up -d   # sobe um Ollama junto
+#
+# Abra http://localhost:5000 no próprio servidor ou https://<IP-do-servidor>:5001 nos outros aparelhos.
+# Defina PUBLIC_HOSTS com o IP/nome do servidor na rede para o certificado HTTPS valer nesses endereços.
+#
+# Diferenças em relação a rodar direto no sistema (start.ps1 / start.sh):
+#   - o Whisper roda na CPU (sem aceleração por GPU dentro do container);
+#   - a autoprogramação fica desligada (o container não tem o código-fonte nem o SDK).
+
+services:
+  sextafeira:
+    build: .
+    image: sextafeira:latest
+    container_name: sextafeira
+    ports:
+      - "5000:5000"
+      - "5001:5001"
+    environment:
+      Ollama__BaseUrl: ${OLLAMA_URL:-http://host.docker.internal:11434}
+      Ollama__Model: ${OLLAMA_MODEL:-}
+      Voice__WhisperModel: ${WHISPER_MODEL:-small}
+      PublicHosts: ${PUBLIC_HOSTS:-}
+      TZ: ${TZ:-America/Sao_Paulo}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - sextafeira-data:/data
+    restart: unless-stopped
+
+  # Opcional: Ollama em container (ative com --profile ollama e OLLAMA_URL=http://ollama:11434).
+  ollama:
+    image: ollama/ollama:latest
+    container_name: sextafeira-ollama
+    profiles: ["ollama"]
+    volumes:
+      - ollama-models:/root/.ollama
+    restart: unless-stopped
+    # Para usar uma GPU NVIDIA no Linux (com o NVIDIA Container Toolkit), descomente:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+volumes:
+  sextafeira-data:
+  ollama-models:

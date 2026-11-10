@@ -16,6 +16,20 @@ public static class LanCertificate
     private static string PfxPath => Path.Combine(DataPaths.Certs, "sextafeira-lan.pfx");
     public static string CrtPath => Path.Combine(DataPaths.Certs, "sextafeira-lan.crt");
 
+    /// <summary>
+    /// Endereços pelos quais os outros dispositivos acessam o servidor (config "PublicHosts", separados por vírgula).
+    /// Necessário em container, onde a interface de rede vista pelo processo não é a da sua rede local.
+    /// Vazio = detecta automaticamente os IPs da máquina.
+    /// </summary>
+    public static IReadOnlyList<string> PublicHosts { get; private set; } = [];
+
+    public static void Configure(string? publicHosts) =>
+        PublicHosts = (publicHosts ?? "").Split([',', ';', ' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    /// <summary>Hosts a anunciar para os outros dispositivos (configurados ou detectados).</summary>
+    public static IReadOnlyList<string> AdvertisedHosts() =>
+        PublicHosts.Count > 0 ? PublicHosts : LanAddresses().Select(ip => ip.ToString()).ToList();
+
     /// <summary>IPs da rede local real (interfaces com gateway; ignora adaptadores virtuais do Hyper-V/WSL/VirtualBox).</summary>
     public static IReadOnlyList<IPAddress> LanAddresses()
     {
@@ -36,15 +50,23 @@ public static class LanCertificate
 
     public static X509Certificate2 LoadOrCreate()
     {
-        var ips = LanAddresses();
+        var ips = LanAddresses().ToList();
+        var dnsNames = new List<string>();
+        foreach (var host in PublicHosts)
+        {
+            if (IPAddress.TryParse(host, out var ip)) { if (!ips.Contains(ip)) ips.Add(ip); }
+            else dnsNames.Add(host);
+        }
+
         if (File.Exists(PfxPath))
         {
             try
             {
                 var existing = X509CertificateLoader.LoadPkcs12FromFile(PfxPath, null);
                 var san = existing.Extensions.OfType<X509SubjectAlternativeNameExtension>().FirstOrDefault();
-                var covered = san?.EnumerateIPAddresses().ToHashSet() ?? [];
-                if (existing.NotAfter > DateTime.Now.AddDays(30) && ips.All(covered.Contains))
+                var coveredIps = san?.EnumerateIPAddresses().ToHashSet() ?? [];
+                var coveredDns = san?.EnumerateDnsNames().ToHashSet(StringComparer.OrdinalIgnoreCase) ?? [];
+                if (existing.NotAfter > DateTime.Now.AddDays(30) && ips.All(coveredIps.Contains) && dnsNames.All(coveredDns.Contains))
                     return existing;
             }
             catch { /* recria abaixo */ }
@@ -58,6 +80,7 @@ public static class LanCertificate
         sanBuilder.AddDnsName(Environment.MachineName.ToLowerInvariant() + ".local");
         sanBuilder.AddIpAddress(IPAddress.Loopback);
         foreach (var ip in ips) sanBuilder.AddIpAddress(ip);
+        foreach (var dns in dnsNames.Distinct(StringComparer.OrdinalIgnoreCase)) sanBuilder.AddDnsName(dns);
         request.CertificateExtensions.Add(sanBuilder.Build());
         request.CertificateExtensions.Add(new X509BasicConstraintsExtension(false, false, 0, true));
         request.CertificateExtensions.Add(new X509KeyUsageExtension(X509KeyUsageFlags.DigitalSignature | X509KeyUsageFlags.KeyEncipherment, true));

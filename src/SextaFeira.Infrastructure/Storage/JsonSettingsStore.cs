@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using SextaFeira.Domain.Agent;
 
@@ -10,10 +11,28 @@ public sealed class JsonSettingsStore : ISettingsStore
     private readonly SemaphoreSlim _lock = new(1, 1);
     private readonly ILogger<JsonSettingsStore> _logger;
 
-    public JsonSettingsStore(ILogger<JsonSettingsStore> logger)
+    private readonly IConfiguration? _config;
+
+    public JsonSettingsStore(ILogger<JsonSettingsStore> logger, IConfiguration? config = null)
     {
         _logger = logger;
-        Current = Load();
+        _config = config;
+        Current = ApplyEnvironmentOverrides(Load());
+    }
+
+    /// <summary>
+    /// Variáveis de ambiente / appsettings vencem o settings.json (útil em Docker e servidores):
+    /// Ollama__BaseUrl, Ollama__Model, SelfCode__Enabled, Voice__WhisperModel, ActiveEngine.
+    /// </summary>
+    private AssistantSettings ApplyEnvironmentOverrides(AssistantSettings s)
+    {
+        if (_config == null) return s;
+        if (_config["Ollama:BaseUrl"] is { Length: > 0 } url) s.Ollama.BaseUrl = url;
+        if (_config["Ollama:Model"] is { Length: > 0 } model) s.Ollama.Model = model;
+        if (_config["Voice:WhisperModel"] is { Length: > 0 } whisper) s.Voice.WhisperModel = whisper;
+        if (_config["ActiveEngine"] is { Length: > 0 } engine) s.ActiveEngine = engine;
+        if (bool.TryParse(_config["SelfCode:Enabled"], out var selfCode)) s.SelfCode.Enabled = selfCode;
+        return s;
     }
 
     public AssistantSettings Current { get; private set; }

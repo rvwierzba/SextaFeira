@@ -54,8 +54,16 @@ public static class BuiltinTools
                 var url = a.Required("url");
                 if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || (uri.Scheme != "https" && uri.Scheme != "http"))
                     return Task.FromResult("Erro: só abro links http(s).");
-                Process.Start(new ProcessStartInfo(uri.ToString()) { UseShellExecute = true });
-                return Task.FromResult($"Abri {uri.Host} no computador.");
+                try
+                {
+                    // Windows/macOS/Linux com desktop: abre no navegador padrão (shell/open/xdg-open).
+                    Process.Start(new ProcessStartInfo(uri.ToString()) { UseShellExecute = true });
+                    return Task.FromResult($"Abri {uri.Host} no computador.");
+                }
+                catch (Exception)
+                {
+                    return Task.FromResult("Erro: este servidor não tem navegador (roda sem tela ou em container). Diga o link ao usuário.");
+                }
             });
     }
 

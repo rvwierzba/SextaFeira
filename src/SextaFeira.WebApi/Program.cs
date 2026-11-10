@@ -20,6 +20,7 @@ var httpsPort = builder.Configuration.GetValue("HttpsPort", 5001);
 // ListenOnLan=false restringe o servidor a este computador (sem microfones de outros dispositivos).
 var listenOnLan = builder.Configuration.GetValue("ListenOnLan", true);
 var bindAddress = listenOnLan ? IPAddress.Any : IPAddress.Loopback;
+LanCertificate.Configure(builder.Configuration["PublicHosts"]);
 var certificate = LanCertificate.LoadOrCreate();
 builder.WebHost.ConfigureKestrel(k =>
 {
@@ -35,13 +36,13 @@ builder.Services.AddHttpClient("web", c =>
     c.Timeout = TimeSpan.FromSeconds(20);
     c.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0 Safari/537.36");
     c.DefaultRequestHeaders.AcceptLanguage.ParseAdd("pt-BR,pt;q=0.9");
-});
+}).AddHttpMessageHandler(() => new TransientRetryHandler());
 
 builder.Services.AddHttpClient("open-data", c =>
 {
     c.Timeout = TimeSpan.FromSeconds(15);
     c.DefaultRequestHeaders.UserAgent.ParseAdd("SextaFeira/3.0 (assistente pessoal local; .NET)");
-});
+}).AddHttpMessageHandler(() => new TransientRetryHandler());
 
 // ── Núcleo ────────────────────────────────────────────────────────────────
 builder.Services.AddSingleton<ISettingsStore, JsonSettingsStore>();
@@ -99,10 +100,10 @@ app.Lifetime.ApplicationStarted.Register(() =>
 {
     var log = app.Services.GetRequiredService<ILogger<Program>>();
     log.LogInformation("Sexta-Feira no ar. Neste computador: http://localhost:{Http}", httpPort);
-    foreach (var ip in listenOnLan ? LanAddresses() : [])
-        log.LogInformation("Outros dispositivos da rede: https://{Ip}:{Https}  (aceite o aviso de certificado)", ip, httpsPort);
+    if (listenOnLan && LanCertificate.PublicHosts.Count == 0 && Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true")
+        log.LogWarning("Rodando em container: os IPs abaixo são internos. Defina PUBLIC_HOSTS com o IP do servidor na sua rede (ex.: PUBLIC_HOSTS=192.168.1.50).");
+    foreach (var host in listenOnLan ? LanCertificate.AdvertisedHosts() : [])
+        log.LogInformation("Outros dispositivos da rede: https://{Host}:{Https}  (aceite o aviso de certificado)", host, httpsPort);
 });
 
 app.Run();
-
-static IEnumerable<IPAddress> LanAddresses() => LanCertificate.LanAddresses();

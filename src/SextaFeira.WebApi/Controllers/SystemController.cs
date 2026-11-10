@@ -59,7 +59,7 @@ public sealed class SystemController : ControllerBase
             tools = tools.Select(t => new { t.Spec.Name, t.Source }),
             devices = _session.Devices.Select(d => new { d.DeviceId, d.Name, d.Kind, d.MicActive }),
             lanUrls = _config.GetValue("ListenOnLan", true)
-                ? LanCertificate.LanAddresses().Select(ip => $"https://{ip}:{httpsPort}")
+                ? LanCertificate.AdvertisedHosts().Select(host => $"https://{host}:{httpsPort}")
                 : [],
         });
     }

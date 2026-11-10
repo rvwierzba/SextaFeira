@@ -21,12 +21,12 @@ Assistente pessoal por voz, inspirada na F.R.I.D.A.Y. dos filmes do Homem de Fer
 
 ## Começando
 
-Pré-requisitos: **.NET 10 SDK**, **Node.js**, **Ollama** e uma GPU com Vulkan (opcional, mas recomendada).
+Pré-requisitos: **.NET 10 SDK**, **Node.js**, **Ollama** e uma GPU com Vulkan (opcional, mas recomendada). Prefere Docker? Veja [Docker](#docker).
 
-```powershell
+```bash
 ollama pull llama3.1:8b         # ou outro modelo com suporte a ferramentas (veja abaixo)
 ollama pull nomic-embed-text    # memória de longo prazo
-./start.ps1                     # compila o HUD, sobe o núcleo e reinicia quando ela se autoprograma
+./start.ps1                     # Windows — no Linux/macOS: ./start.sh
 ```
 
 Abra `http://localhost:5000`, clique em **Ligar microfone** e diga *"Sexta-Feira, como está o tempo?"*.
@@ -35,9 +35,35 @@ Na primeira execução o núcleo baixa o modelo Whisper escolhido (padrão `smal
 
 ### Outros dispositivos (celular, tablet, outro PC)
 
-O terminal mostra os endereços da rede, por exemplo `https://192.168.1.100:5001`. Abra no aparelho, aceite o aviso de certificado autoassinado ("Avançado → Continuar") e ligue o microfone. É o HTTPS que permite ao navegador liberar o microfone fora do `localhost`. Para usar só no PC: `./start.ps1 -LocalOnly`.
+O terminal mostra os endereços da rede, por exemplo `https://192.168.1.100:5001`. Abra no aparelho, aceite o aviso de certificado autoassinado ("Avançado → Continuar") e ligue o microfone. É o HTTPS que permite ao navegador liberar o microfone fora do `localhost`. Para usar só no PC: `./start.ps1 -LocalOnly` (ou `./start.sh --local-only`).
 
 Todos os aparelhos compartilham a mesma conversa; quem pergunta é quem ouve a resposta.
+
+## Plataformas
+
+A Sexta-Feira tem duas partes:
+
+- **Núcleo** (servidor .NET 10 + Ollama + Whisper): roda em **Windows, Linux e macOS** (x64 e ARM, inclusive Apple Silicon e Raspberry Pi 5), ou em **Docker**. Fica num computador da casa: PC, Mac, mini PC, NAS ou servidor.
+- **Dispositivos** (HUD no navegador): qualquer aparelho com navegador moderno, ou seja **Android, iPhone/iPad, Windows, macOS, Linux**, TV ou tablet. Eles só capturam o áudio e falam a resposta; o pesado roda no núcleo.
+
+| Como rodar o núcleo | Comando | Reconhecimento de voz |
+|---|---|---|
+| Windows | `./start.ps1` | GPU (Vulkan) ou CPU |
+| Linux | `./start.sh` | GPU (Vulkan) ou CPU |
+| macOS | `./start.sh` | CPU (Apple Silicon é rápido o suficiente para `small`) |
+| Docker (Linux/servidor) | `docker compose up -d` | CPU |
+
+### Docker
+
+```bash
+docker compose up -d                                              # usa o Ollama do host (porta 11434)
+OLLAMA_URL=http://ollama:11434 docker compose --profile ollama up -d   # ou sobe um Ollama junto
+PUBLIC_HOSTS=192.168.1.50 docker compose up -d                    # IP/nome do servidor na rede, para o HTTPS
+```
+
+Variáveis úteis: `OLLAMA_URL`, `OLLAMA_MODEL`, `WHISPER_MODEL` (`base` em CPUs fracas, `small` como padrão), `PUBLIC_HOSTS`, `TZ`. Os dados ficam no volume `sextafeira-data`. No container a autoprogramação fica desligada, porque ele não tem o código-fonte nem o SDK; para ela, rode direto no sistema.
+
+Se o Ollama do host só escuta em `127.0.0.1`, o container não o alcança: inicie-o com `OLLAMA_HOST=0.0.0.0`.
 
 ## Cérebro (LLM)
 
