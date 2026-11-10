@@ -33,6 +33,7 @@ services:
     container_name: sextafeira-backend
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
+      - TZ=America/Sao_Paulo
       - ConnectionStrings__PostgresVector=Host=postgres-vector;Port=5432;Database=sextafeira_db;Username=postgres;Password=postgres
       - Ollama__BaseUrl=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
     extra_hosts:

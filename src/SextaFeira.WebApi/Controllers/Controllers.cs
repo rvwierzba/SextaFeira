@@ -54,6 +54,29 @@ public class CoreController : ControllerBase
         return Ok(response);
     }
 
+    [HttpGet("tts")]
+    public async Task<IActionResult> GetTtsAudio([FromQuery] string text, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return BadRequest(new { error = "O parâmetro text é obrigatório." });
+        }
+
+        try
+        {
+            var cleanText = Uri.EscapeDataString(text.Trim());
+            var url = $"https://translate.google.com/translate_tts?ie=UTF-8&q={cleanText}&tl=pt-BR&client=tw-ob";
+            using var client = new HttpClient();
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+            var audioBytes = await client.GetByteArrayAsync(url, cancellationToken);
+            return File(audioBytes, "audio/mpeg");
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { error = "Erro na síntese de áudio PT-BR", details = ex.Message });
+        }
+    }
+
     [HttpPost("transcribe")]
     public async Task<IActionResult> TranscribeAudio([FromBody] TranscribeAudioRequest request, CancellationToken cancellationToken)
     {

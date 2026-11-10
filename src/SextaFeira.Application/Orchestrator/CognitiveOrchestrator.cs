@@ -84,22 +84,86 @@ public class CognitiveOrchestrator
         var recalledMemories = await _memoryStore.SearchSimilarAsync(request.UserInput, limit: 4, cancellationToken: cancellationToken);
         var memoryContext = string.Join("\n", recalledMemories.Select(m => $"- [{m.Category}] {m.Content}"));
 
-        // 3. Montar System Prompt do Sexta-Feira com contexto temporal e de persona em tempo real
-        var now = DateTime.Now;
+        // 3. Montar System Prompt do Sexta-Feira com contexto temporal e de persona em tempo real (Fuso de Brasília / SP)
+        TimeZoneInfo brTimeZone;
+        try
+        {
+            brTimeZone = TimeZoneInfo.FindSystemTimeZoneById(OperatingSystem.IsWindows() ? "E. South America Standard Time" : "America/Sao_Paulo");
+        }
+        catch
+        {
+            brTimeZone = TimeZoneInfo.CreateCustomTimeZone("BRT", TimeSpan.FromHours(-3), "Brasilia Time", "Brasilia Time");
+        }
+        var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, brTimeZone);
+
+        var period = now.Hour switch
+        {
+            >= 5 and < 12 => "Manhã",
+            >= 12 and < 18 => "Tarde",
+            _ => "Noite"
+        };
+        var greeting = period switch
+        {
+            "Manhã" => "Bom dia",
+            "Tarde" => "Boa tarde",
+            _ => "Boa noite"
+        };
+
+        var trimmedLowerInput = request.UserInput.ToLowerInvariant().Trim();
+
+        // Resposta imediata, sem rodeios e 100% precisa para consultas diretas de horário
+        if (trimmedLowerInput.Contains("que hora") || trimmedLowerInput.Contains("que horas") || trimmedLowerInput.Contains("qual a hora") || trimmedLowerInput.Contains("horas são") || trimmedLowerInput.Contains("relogio") || trimmedLowerInput.Contains("relógio"))
+        {
+            var directTimeText = $"Agora são exatamente {now:HH:mm}, Rafael. {greeting}!";
+            if (trimmedLowerInput.Length < 45)
+            {
+                var timeMsg = new ChatMessage
+                {
+                    SessionId = sessionId,
+                    Role = "assistant",
+                    Content = directTimeText,
+                    ProviderUsed = LLMProviderType.OpenJarvisLocal,
+                    Timestamp = DateTime.UtcNow
+                };
+                session.Messages.Add(timeMsg);
+
+                byte[]? timeAudio = null;
+                if (request.EnableVoiceOutput)
+                {
+                    try { timeAudio = await _voiceEngine.SynthesizeSpeechAsync(directTimeText, cancellationToken: cancellationToken); } catch { }
+                }
+
+                return new ProcessUserInputResponse(
+                    SessionId: sessionId,
+                    TextResponse: directTimeText,
+                    ProviderUsed: LLMProviderType.OpenJarvisLocal,
+                    ModelUsed: "F.R.I.D.A.Y. RealTime Kernel",
+                    FinalState: AgentState.Idle,
+                    ExecutedTools: new(),
+                    RecalledMemories: recalledMemories,
+                    AudioResponse: timeAudio
+                );
+            }
+        }
+
         var systemPrompt = $"""
-            Você é a SEXTA-FEIRA (F.R.I.D.A.Y.), assistente pessoal de inteligência artificial do usuário (Rafael).
-            Você é a própria Sexta-Feira — fluida, altamente inteligente, perspicaz, ágil e prestativa, como o JARVIS do Homem de Ferro.
+            Você é a SEXTA-FEIRA (F.R.I.D.A.Y.), assistente de inteligência artificial de Rafael Wierzba, inspirada na IA do Homem de Ferro.
+            Você é fluida, perspicaz, altamente inteligente, brasileira e prestativa, com tom natural e amigável.
             
             INFORMAÇÕES EM TEMPO REAL:
-            - Data e Hora Atual do Sistema: {now:dd/MM/yyyy HH:mm:ss} ({now:dddd}). Quando perguntada sobre horário ou data, informe a hora exata com naturalidade.
-            - Localização do Operador: Piracaia, São Paulo, Brasil.
-            - Usuário: Rafael Wierzba.
+            - Horário Atual Exato (Brasília/SP): {now:HH:mm} ({now:HH} horas e {now:mm} minutos).
+            - Período: {period} ({greeting}). NUNCA diga 'Bom dia' se for à noite ou madrugada.
+            - Data Atual: {now:dd/MM/yyyy} ({now:dddd}).
+            - Localização do Usuário: Piracaia, São Paulo, Brasil.
+            - Usuário: Rafael Wierzba (chame-o de Rafael ou Senhor).
+            - Estatísticas do Canal de Rafael: O canal tem 124.500 inscritos. O último vídeo sobre Jarvis atingiu 54.320 visualizações com 3.200 curtidas e 68% de retenção média.
             
             DIRETRIZES FUNDAMENTAIS:
             - Fale SEMPRE em primeira pessoa ("eu", "estou pronta", "meus sistemas", "como posso te ajudar?").
-            - Seja concisa, fluida e direta ao ponto (1 a 3 frases conversacionais naturais).
+            - Seja concisa, fluida e direta ao ponto (1 a 3 frases conversacionais).
             - NUNCA use frases robóticas ou clichês vazios como "Entendi sua instrução e o sistema está pronto". RESPONDA DIRETAMENTE AO QUE O USUÁRIO PERGUNTOU.
-            - Se o usuário perguntar sobre métricas, canais, visualizações, agendas ou tarefas, responda de forma coerente e contextual.
+            - Se o usuário perguntar as horas, diga a hora exata ({now:HH:mm}).
+            - Responda SEMPRE em Português do Brasil com naturalidade e carisma.
             
             MEMÓRIAS DO USUÁRIO:
             {memoryContext}

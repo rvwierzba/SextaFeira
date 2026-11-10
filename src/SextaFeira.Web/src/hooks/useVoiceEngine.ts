@@ -125,7 +125,7 @@ export const useVoiceEngine = ({ onCommandDetected, onStateChange }: UseVoiceEng
       mediaStreamRef.current = null;
     }
     if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-      audioContextRef.current.close().catch(() => {});
+      audioContextRef.current.close().catch(() => { });
       audioContextRef.current = null;
     }
     setAudioLevel(0.05);
@@ -171,8 +171,8 @@ export const useVoiceEngine = ({ onCommandDetected, onStateChange }: UseVoiceEng
       const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
         ? 'audio/webm;codecs=opus'
         : MediaRecorder.isTypeSupported('audio/webm')
-        ? 'audio/webm'
-        : 'audio/ogg';
+          ? 'audio/webm'
+          : 'audio/ogg';
 
       const recorder = new MediaRecorder(stream, { mimeType });
       recorder.ondataavailable = (event) => {
@@ -274,7 +274,7 @@ export const useVoiceEngine = ({ onCommandDetected, onStateChange }: UseVoiceEng
       }
 
       if (recognitionRef.current) {
-        try { recognitionRef.current.stop(); } catch {}
+        try { recognitionRef.current.stop(); } catch { }
       }
 
       const recognition = new SpeechRecognition();
@@ -296,32 +296,32 @@ export const useVoiceEngine = ({ onCommandDetected, onStateChange }: UseVoiceEng
           return;
         }
 
-        let currentInterim = '';
-        let currentFinal = '';
-
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          const item = event.results[i];
-          const transcriptChunk = item[0].transcript;
-          if (item.isFinal) {
-            currentFinal += transcriptChunk;
-          } else {
-            currentInterim += transcriptChunk;
-          }
+        // Itera por todos os índices de resultados para não perder a frase completa
+        let completeTranscript = '';
+        for (let i = 0; i < event.results.length; ++i) {
+          completeTranscript += event.results[i][0].transcript;
         }
 
-        const currentSpeech = (currentFinal || currentInterim).trim();
+        const currentSpeech = completeTranscript.trim();
         if (currentSpeech.length > 0) {
           accumulatedTranscriptRef.current = currentSpeech;
           setInterimTranscript(currentSpeech);
 
-          // Temporizador de silêncio natural de 1.4s (tempo humano de pausa entre palavras)
-          // NÃO corta a fala no primeiro chunk ou na primeira palavra!
           if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+
+          // Se o usuário falou apenas a wake-word ("sexta-feira", "ei sexta"),
+          // dá um tempo maior (2.2s) para ele fazer a pergunta sem cortar no meio!
+          const cleaned = cleanTranscriptCommand(currentSpeech);
+          const isJustWakeWord = !cleaned || cleaned === 'sexta-feira' || cleaned === 'sexta feira' || cleaned === 'friday';
+          const waitTime = isJustWakeWord ? 2200 : 1300;
+
           silenceTimerRef.current = setTimeout(() => {
             if (accumulatedTranscriptRef.current.trim().length >= 2 && !isSpeakingRef.current) {
-              dispatchCommand(accumulatedTranscriptRef.current);
+              const toDispatch = accumulatedTranscriptRef.current;
+              accumulatedTranscriptRef.current = '';
+              dispatchCommand(toDispatch);
             }
-          }, 1400);
+          }, waitTime);
         }
       };
 
@@ -381,14 +381,14 @@ export const useVoiceEngine = ({ onCommandDetected, onStateChange }: UseVoiceEng
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
-      } catch {}
+      } catch { }
       recognitionRef.current = null;
     }
 
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       try {
         mediaRecorderRef.current.stop();
-      } catch {}
+      } catch { }
       mediaRecorderRef.current = null;
     }
 
@@ -399,123 +399,168 @@ export const useVoiceEngine = ({ onCommandDetected, onStateChange }: UseVoiceEng
 
   // Síntese de Voz (TTS) com voz estritamente FEMININA e BRASILEIRA (PT-BR)
   const speakResponse = useCallback((text: string) => {
-    if (!('speechSynthesis' in window)) {
-      console.warn('speechSynthesis não suportado');
+    const cleanText = text.replace(/[*#_`]/g, '').trim();
+    if (!cleanText) {
       onStateChange('IDLE');
       return;
     }
 
     try {
-      window.speechSynthesis.cancel();
-      if (window.speechSynthesis.paused) {
-        window.speechSynthesis.resume();
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
       }
 
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'pt-BR';
-      // Cadência natural e brasileira (1.12x)
-      utterance.rate = 1.12;
-      // Pitch natural (1.0) para preservar o sotaque brasileiro autêntico da Maria/Francisca
-      utterance.pitch = 1.0;
-      utterance.volume = 1.0;
+      // Função de fallback para síntese nativa do navegador
+      const speakViaBrowserSpeech = () => {
+        if (!('speechSynthesis' in window)) {
+          onStateChange('IDLE');
+          return;
+        }
 
-      // Obter vozes instaladas no sistema e navegador
-      const voices = voicesRef.current.length > 0 ? voicesRef.current : window.speechSynthesis.getVoices();
+        try {
+          if (window.speechSynthesis.paused) {
+            window.speechSynthesis.resume();
+          }
 
-      // Filtro rigoroso: DEVE ser Português do BRASIL (pt-BR) e NUNCA Portugal (pt-PT)
-      const isStrictlyPtBr = (v: SpeechSynthesisVoice) => {
-        const lang = (v.lang || '').toLowerCase().replace('_', '-');
-        const name = (v.name || '').toLowerCase();
-        const isBr = lang.includes('pt-br') || name.includes('brazil') || name.includes('brasil');
-        const isPtPt = lang.includes('pt-pt') || name.includes('portugal') || name.includes('helena') || name.includes('fernanda') || name.includes('raquel');
-        return isBr && !isPtPt;
+          const utterance = new SpeechSynthesisUtterance(cleanText);
+          utterance.lang = 'pt-BR';
+          utterance.volume = 1.0;
+
+          const voices = voicesRef.current.length > 0 ? voicesRef.current : window.speechSynthesis.getVoices();
+
+          const isStrictlyPtBr = (v: SpeechSynthesisVoice) => {
+            const lang = (v.lang || '').toLowerCase().replace('_', '-');
+            const name = (v.name || '').toLowerCase();
+            const isBr = lang.includes('pt-br') || name.includes('brazil') || name.includes('brasil');
+            const isPtPt = lang.includes('pt-pt') || name.includes('portugal') || name.includes('helena') || name.includes('fernanda') || name.includes('raquel') || name.includes('duarte');
+            return isBr && !isPtPt;
+          };
+
+          const isMale = (v: SpeechSynthesisVoice) => {
+            const name = (v.name || '').toLowerCase();
+            return name.includes('daniel') || name.includes('antonio') || name.includes('antónio') ||
+              name.includes('felipe') || name.includes('ricardo') || name.includes('male') ||
+              name.includes('homem') || name.includes('david') || name.includes('george') ||
+              name.includes('fabio') || name.includes('fábio');
+          };
+
+          // Prioridade para vozes neurais e naturais do Brasil: Google pt-BR e Francisca
+          const ptBrFemaleKeywords = [
+            'google português do brasil',
+            'francisca',
+            'leticia',
+            'letícia',
+            'thalita',
+            'luciana',
+            'vitória',
+            'vitoria',
+            'maria'
+          ];
+
+          let selectedVoice: SpeechSynthesisVoice | undefined;
+          for (const kw of ptBrFemaleKeywords) {
+            selectedVoice = voices.find(v => isStrictlyPtBr(v) && v.name.toLowerCase().includes(kw) && !isMale(v));
+            if (selectedVoice) break;
+          }
+
+          if (!selectedVoice) {
+            selectedVoice = voices.find(v => isStrictlyPtBr(v) && !isMale(v));
+          }
+
+          if (selectedVoice) {
+            utterance.voice = selectedVoice;
+            console.log('🎙️ [VOICE ENGINE] Voz PT-BR Selecionada:', selectedVoice.name, selectedVoice.lang);
+            // Se for Microsoft Maria, usa pitch mais aveludado e taxa 1.0 para não ficar robótica
+            if (selectedVoice.name.toLowerCase().includes('maria')) {
+              utterance.pitch = 0.95;
+              utterance.rate = 1.0;
+            } else {
+              utterance.pitch = 1.0;
+              utterance.rate = 1.05;
+            }
+          } else {
+            utterance.pitch = 1.0;
+            utterance.rate = 1.0;
+          }
+
+          currentUtteranceRef.current = utterance;
+
+          utterance.onstart = () => {
+            isSpeakingRef.current = true;
+            onStateChange('SPEAKING');
+            setAudioLevel(0.68);
+          };
+
+          utterance.onend = () => {
+            isSpeakingRef.current = false;
+            currentUtteranceRef.current = null;
+            onStateChange('IDLE');
+            setAudioLevel(0.05);
+
+            if (isListeningRef.current && recognitionRef.current) {
+              try { recognitionRef.current.start(); } catch { }
+            }
+          };
+
+          utterance.onerror = () => {
+            isSpeakingRef.current = false;
+            currentUtteranceRef.current = null;
+            onStateChange('IDLE');
+            setAudioLevel(0.05);
+          };
+
+          window.speechSynthesis.speak(utterance);
+        } catch (e) {
+          console.warn('Erro ao reproduzir fala sintetizada:', e);
+          isSpeakingRef.current = false;
+          onStateChange('IDLE');
+        }
       };
 
-      const isMale = (v: SpeechSynthesisVoice) => {
-        const name = (v.name || '').toLowerCase();
-        return name.includes('daniel') || name.includes('antonio') || name.includes('antónio') ||
-               name.includes('felipe') || name.includes('ricardo') || name.includes('male') ||
-               name.includes('homem') || name.includes('david') || name.includes('george') ||
-               name.includes('fabio') || name.includes('fábio');
+      // Tenta reproduzir primeiramente via stream de áudio de alta fidelidade PT-BR
+      const audioUrl = `http://localhost:5000/api/core/tts?text=${encodeURIComponent(cleanText.substring(0, 300))}`;
+      const audio = new Audio(audioUrl);
+
+      let browserSynthInvoked = false;
+      const triggerFallback = () => {
+        if (!browserSynthInvoked) {
+          browserSynthInvoked = true;
+          speakViaBrowserSpeech();
+        }
       };
 
-      // Nomes de vozes femininas exclusivamente Brasileiras (pt-BR)
-      const ptBrFemaleKeywords = [
-        'maria',     // Microsoft Maria Desktop / Microsoft Maria - pt-BR nativa do Windows!
-        'francisca', // Microsoft Francisca Online (Natural) - pt-BR
-        'leticia',   // Microsoft Leticia - pt-BR
-        'letícia',
-        'luciana',   // Luciana - pt-BR
-        'vitória',   // Vitoria - pt-BR
-        'vitoria',
-        'google português do brasil' // Google pt-BR
-      ];
+      const fallbackTimer = setTimeout(() => {
+        triggerFallback();
+      }, 750);
 
-      let selectedVoice: SpeechSynthesisVoice | undefined;
-
-      // 1. Busca por nome específico feminino BRASILEIRO
-      for (const kw of ptBrFemaleKeywords) {
-        selectedVoice = voices.find(v => isStrictlyPtBr(v) && v.name.toLowerCase().includes(kw) && !isMale(v));
-        if (selectedVoice) break;
-      }
-
-      // 2. Qualquer voz pt-BR feminina ou neutra
-      if (!selectedVoice) {
-        selectedVoice = voices.find(v => isStrictlyPtBr(v) && !isMale(v));
-      }
-
-      // 3. Qualquer pt-BR (sem ser Portugal)
-      if (!selectedVoice) {
-        selectedVoice = voices.find(v => isStrictlyPtBr(v));
-      }
-
-      if (selectedVoice) {
-        utterance.voice = selectedVoice;
-        console.log('🎙️ [VOICE ENGINE] Voz PT-BR Selecionada:', selectedVoice.name, selectedVoice.lang);
-      }
-
-      currentUtteranceRef.current = utterance;
-
-      utterance.onstart = () => {
+      audio.onplay = () => {
+        clearTimeout(fallbackTimer);
         isSpeakingRef.current = true;
         onStateChange('SPEAKING');
-        setAudioLevel(0.68);
+        setAudioLevel(0.72);
       };
 
-      utterance.onend = () => {
+      audio.onended = () => {
         isSpeakingRef.current = false;
-        currentUtteranceRef.current = null;
         onStateChange('IDLE');
         setAudioLevel(0.05);
-
-        // Retoma o reconhecimento de voz suavemente após ela terminar de falar
         if (isListeningRef.current && recognitionRef.current) {
-          try {
-            recognitionRef.current.start();
-          } catch {}
+          try { recognitionRef.current.start(); } catch { }
         }
       };
 
-      utterance.onerror = (e) => {
-        console.warn('Aviso na síntese vocal:', e);
-        isSpeakingRef.current = false;
-        currentUtteranceRef.current = null;
-        onStateChange('IDLE');
-        setAudioLevel(0.05);
+      audio.onerror = () => {
+        clearTimeout(fallbackTimer);
+        triggerFallback();
       };
 
-      // Workaround para browsers mantendo áudio ativo sem congelar
-      const resumeInterval = setInterval(() => {
-        if (!window.speechSynthesis.speaking) {
-          clearInterval(resumeInterval);
-        } else {
-          window.speechSynthesis.resume();
-        }
-      }, 4000);
+      audio.play().catch(() => {
+        clearTimeout(fallbackTimer);
+        triggerFallback();
+      });
 
-      window.speechSynthesis.speak(utterance);
     } catch (err) {
-      console.warn('Erro ao disparar fala:', err);
+      console.warn('Erro na síntese vocal:', err);
       isSpeakingRef.current = false;
       onStateChange('IDLE');
     }
