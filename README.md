@@ -1,16 +1,17 @@
 <p align="center">
   <img src="docs/assets/logo-placeholder.svg" width="120" alt="Sexta-Feira Logo"/>
   <br/>
-  <strong>🧠 SEXTA-FEIRA (F.R.I.D.A.Y.)</strong>
+  <strong>🧠 SEXTA-FEIRA (F.R.I.D.A.Y.) v2.0</strong>
   <br/>
-  <em>Harness de IA Autônoma Multimodal</em>
+  <em>Harness de IA Autônoma Multimodal · Stanford OpenJarvis Local Engine & HUD Fluido Cinemático</em>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.0.0-blue?style=for-the-badge" alt="Version"/>
+  <img src="https://img.shields.io/badge/version-2.0.0-blue?style=for-the-badge" alt="Version"/>
+  <img src="https://img.shields.io/badge/OpenJarvis-Stanford_SAIL-00f0ff?style=for-the-badge" alt="Stanford OpenJarvis"/>
   <img src="https://img.shields.io/badge/.NET-10.0-purple?style=for-the-badge&logo=dotnet" alt=".NET 10"/>
   <img src="https://img.shields.io/badge/React-18+-61DAFB?style=for-the-badge&logo=react" alt="React"/>
-  <img src="https://img.shields.io/badge/Three.js-WebGL-black?style=for-the-badge&logo=threedotjs" alt="Three.js"/>
+  <img src="https://img.shields.io/badge/Three.js-WebGL_Shaders-black?style=for-the-badge&logo=threedotjs" alt="Three.js"/>
   <img src="https://img.shields.io/badge/PostgreSQL-pgvector-336791?style=for-the-badge&logo=postgresql" alt="PostgreSQL"/>
   <img src="https://img.shields.io/badge/Docker-Container-2496ED?style=for-the-badge&logo=docker" alt="Docker"/>
   <img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="License"/>

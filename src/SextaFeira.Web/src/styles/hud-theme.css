@@ -271,3 +271,103 @@ body {
 .hud-pulse-glow {
   animation: hud-pulse 3s infinite ease-in-out;
 }
+
+
+/* Fluid Futuristic Animations (Matheus Tilli Cinematic Style) */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes orbitRotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes holographicShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Collapsible Floating Sci-Fi Dock Wings */
+.hud-dock-wing {
+  position: absolute;
+  top: 18px;
+  bottom: 85px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 20;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+  pointer-events: auto;
+  max-height: calc(100vh - 105px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.hud-dock-wing::-webkit-scrollbar {
+  width: 3px;
+}
+
+.hud-dock-wing::-webkit-scrollbar-thumb {
+  background: rgba(0, 240, 255, 0.25);
+  border-radius: 2px;
+}
+
+.hud-dock-left {
+  left: 20px;
+}
+
+.hud-dock-left.collapsed {
+  transform: translateX(-110%);
+  opacity: 0.15;
+  pointer-events: none;
+}
+
+.hud-dock-right {
+  right: 20px;
+}
+
+.hud-dock-right.collapsed {
+  transform: translateX(110%);
+  opacity: 0.15;
+  pointer-events: none;
+}
+
+/* Wing Toggle Button */
+.hud-dock-toggle-btn {
+  background: rgba(4, 18, 38, 0.85);
+  border: 1px solid rgba(0, 240, 255, 0.4);
+  color: #00f0ff;
+  border-radius: 4px;
+  padding: 5px 10px;
+  font-family: var(--hud-font-orbitron);
+  font-size: 0.65rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+  z-index: 30;
+  pointer-events: auto;
+}
+
+.hud-dock-toggle-btn:hover {
+  border-color: #00f0ff;
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.5);
+  background: rgba(0, 240, 255, 0.15);
+}

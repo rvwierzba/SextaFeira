@@ -8,6 +8,7 @@ using SextaFeira.Infrastructure.Integrations;
 using SextaFeira.Infrastructure.LLMs;
 using SextaFeira.Infrastructure.MCP;
 using SextaFeira.Infrastructure.Network;
+using SextaFeira.Infrastructure.OpenJarvis;
 using SextaFeira.Infrastructure.Persistence;
 using SextaFeira.Infrastructure.Sandbox;
 using SextaFeira.Infrastructure.Stealth;
@@ -62,6 +63,9 @@ builder.Services.AddSingleton<ISandboxService, DockerContainerRunner>();
 builder.Services.AddSingleton<IPersonalIntegrationsService, PersonalIntegrationsService>();
 builder.Services.AddSingleton<IVoiceEngine, VoiceEngineService>();
 builder.Services.AddScoped<IMcpHost, McpServerRegistry>();
+
+// Motor OpenJarvis (Stanford Hazy Research / SAIL - Intelligence Per Watt)
+builder.Services.AddSingleton<IOpenJarvisEngine, OpenJarvisInferenceEngine>();
 
 // Orquestradores e Motores da Aplicação
 builder.Services.AddScoped<CognitiveOrchestrator>();

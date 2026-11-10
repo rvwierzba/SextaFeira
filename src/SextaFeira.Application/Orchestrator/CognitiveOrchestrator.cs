@@ -31,6 +31,7 @@ public class CognitiveOrchestrator
     private readonly IMcpHost _mcpHost;
     private readonly IVoiceEngine _voiceEngine;
     private readonly IAiConnectionManager? _aiConnectionManager;
+    private readonly IOpenJarvisEngine? _openJarvisEngine;
     private readonly ILogger<CognitiveOrchestrator> _logger;
 
     private static readonly Dictionary<Guid, ConversationSession> _sessionCache = new();
@@ -41,7 +42,8 @@ public class CognitiveOrchestrator
         IMcpHost mcpHost,
         IVoiceEngine voiceEngine,
         ILogger<CognitiveOrchestrator> logger,
-        IAiConnectionManager? aiConnectionManager = null)
+        IAiConnectionManager? aiConnectionManager = null,
+        IOpenJarvisEngine? openJarvisEngine = null)
     {
         _llmProviders = llmProviders;
         _memoryStore = memoryStore;
@@ -49,6 +51,7 @@ public class CognitiveOrchestrator
         _voiceEngine = voiceEngine;
         _logger = logger;
         _aiConnectionManager = aiConnectionManager;
+        _openJarvisEngine = openJarvisEngine;
     }
 
     public async Task<ProcessUserInputResponse> ProcessInputAsync(
@@ -130,6 +133,14 @@ public class CognitiveOrchestrator
                 effectiveProvider = LLMProviderType.GoogleGemini;
             }
         }
+        else if (lowerInput.Contains("usar openjarvis") || lowerInput.Contains("ativar openjarvis") || lowerInput.Contains("modo openjarvis") || lowerInput.Contains("usar local") || lowerInput.Contains("modo local") || lowerInput.Contains("modo stanford"))
+        {
+            if (_aiConnectionManager != null)
+            {
+                await _aiConnectionManager.SetActiveProviderAsync(LLMProviderType.OpenJarvisLocal, cancellationToken);
+            }
+            effectiveProvider = LLMProviderType.OpenJarvisLocal;
+        }
 
         var llmRequest = new LLMRequest(
             Prompt: request.UserInput,
@@ -138,8 +149,19 @@ public class CognitiveOrchestrator
             Tools: availableTools
         );
 
-        // 5. Selecionar Provedor com Fallback Inteligente
-        var (provider, response) = await ExecuteWithFallbackAsync(effectiveProvider, llmRequest, cancellationToken);
+        // 5. Selecionar Provedor com Fallback Inteligente ou OpenJarvis Spec Search Loop
+        LLMResponse response;
+        if ((effectiveProvider == LLMProviderType.OpenJarvisLocal || effectiveProvider == LLMProviderType.OllamaLocal) && _openJarvisEngine != null)
+        {
+            onStateChanged?.Invoke(AgentState.Thinking, "OpenJarvis: Executando ciclo de Spec Search e inferência on-device...");
+            var specPlan = await _openJarvisEngine.SynthesizeSpecAsync(request.UserInput, availableTools, cancellationToken);
+            response = await _openJarvisEngine.ExecuteSpecPlanAsync(specPlan, llmRequest, cancellationToken);
+        }
+        else
+        {
+            var (_, fallbackResponse) = await ExecuteWithFallbackAsync(effectiveProvider, llmRequest, cancellationToken);
+            response = fallbackResponse;
+        }
 
         var executedTools = new List<ToolExecutionResult>();
 

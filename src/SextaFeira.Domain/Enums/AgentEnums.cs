@@ -16,7 +16,8 @@ public enum LLMProviderType
     OpenAI = 2,
     Anthropic = 3,
     GoogleGemini = 4,
-    Groq = 5
+    Groq = 5,
+    OpenJarvisLocal = 6
 }
 
 public enum ExecutionStatus

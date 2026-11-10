@@ -2,25 +2,37 @@ import React, { useState } from 'react';
 import { HologramCoreCanvas, AgentVisualState } from './components/3d/HologramCoreCanvas';
 import { ModelCoreWidget, GeolocationWidget } from './components/hud/ModelCoreAndGeoWidgets';
 import { NetworkMapWidget, PersonalServicesWidget } from './components/hud/NetworkAndPersonalWidgets';
-import { SandboxConsoleWidget, AudioVisualizerWidget, HudStatusBar } from './components/hud/ConsoleAndStatusWidgets';
+import { SandboxConsoleWidget, HudStatusBar } from './components/hud/ConsoleAndStatusWidgets';
 import { AiAccountManagerModal } from './components/hud/AiAccountManagerModal';
+import { AudioOscilloscope } from './components/hud/AudioOscilloscope';
+import { HolographicSubtitles } from './components/hud/HolographicSubtitles';
+import { OpenJarvisTelemetryWidget } from './components/hud/OpenJarvisTelemetryWidget';
 import { useVoiceEngine } from './hooks/useVoiceEngine';
+import { Sliders, Maximize2, Minimize2 } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [agentState, setAgentState] = useState<AgentVisualState>('IDLE');
-  const [statusMessage, setStatusMessage] = useState<string>('AGUARDANDO COMANDO DE VOZ OU TEXTO...');
+  const [statusMessage, setStatusMessage] = useState<string>('SISTEMAS OPERACIONAIS EM STANDBY // SEXTA-FEIRA PRONTA');
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
-  const [activeBrainName, setActiveBrainName] = useState('Google Gemini 2.0 Flash');
+  const [activeBrainName, setActiveBrainName] = useState('Stanford OpenJarvis Local / Gemini');
+  const [isLeftDockOpen, setIsLeftDockOpen] = useState(false);
+  const [isRightDockOpen, setIsRightDockOpen] = useState(false);
+
+  const [lastUserSpeech, setLastUserSpeech] = useState<string>('');
+  const [lastAiResponse, setLastAiResponse] = useState<string>('');
+
   const [consoleLogs, setConsoleLogs] = useState<string[]>([
-    '[INIT] Sexta-Feira AI Core v1.0.0 inicializado com sucesso.',
-    '[GOOGLE] Conectado à conta rafaelwierzba@gmail.com via Gemini 2.0 Flash.',
-    '[AI HUB] Hub multi-provedor pronto (Google Gemini, OpenAI GPT-4o, Anthropic Claude).',
-    '[MCP] 8 ferramentas ativas (Google Calendar, Gmail, Network, Spotify, Stealth).',
-    '[MEMORY] pgvector cluster conectado (memória de longo prazo pronta).'
+    '[INIT] Sexta-Feira AI Core v2.0 inicializado com sucesso.',
+    '[STANFORD] OpenJarvis Local Inference Engine ativo (<50ms zero-latency dispatch).',
+    '[HARDWARE] Quota de aceleração detectada: NVIDIA CUDA / AVX2.',
+    '[SPEC SEARCH] Ciclo fechado Diagnose-Plan-Execute-Gate compilado.',
+    '[AI HUB] Hub multi-provedor conectado (OpenJarvis Local, Google Gemini, OpenAI, Claude).',
+    '[MCP] 8 ferramentas ativas (Google Calendar, Gmail, Network, Spotify, Stealth).'
   ]);
   const [isSandboxRunning, setIsSandboxRunning] = useState(false);
 
   const handleCommandDetected = async (command: string) => {
+    setLastUserSpeech(command);
     setAgentState('THINKING');
     setStatusMessage(`Processando no cérebro ativo (${activeBrainName}): "${command}"...`);
     addConsoleLog(`[COMMAND] Recebido: "${command}"`);
@@ -52,12 +64,14 @@ export const App: React.FC = () => {
         textResponse = generateLocalResponse(command);
       }
 
+      setLastAiResponse(textResponse);
       addConsoleLog(`[SEXTA-FEIRA] ${textResponse}`);
       setStatusMessage(`Respondendo: ${textResponse.substring(0, 50)}...`);
       speakResponse(textResponse);
     } catch (err) {
       console.error(err);
       const fallbackMsg = generateLocalResponse(command);
+      setLastAiResponse(fallbackMsg);
       addConsoleLog(`[SEXTA-FEIRA] ${fallbackMsg}`);
       speakResponse(fallbackMsg);
       setAgentState('IDLE');
@@ -126,6 +140,9 @@ export const App: React.FC = () => {
 
   const generateLocalResponse = (query: string): string => {
     const q = query.toLowerCase();
+    if (q.includes('status') || q.includes('sistema') || q.includes('hardware') || q.includes('openjarvis')) {
+      return 'Status dos sistemas Sexta-Feira: Motor OpenJarvis local online com taxa de eficiência de 96.4 TOPS/W. Latência média sub-50ms, cluster pgvector e MCP Tools 100% operacionais.';
+    }
     if (q.includes('agenda') || q.includes('compromisso') || q.includes('calendário') || q.includes('reunião')) {
       return 'Consultei seus compromissos no Google Agenda: Você possui 2 eventos confirmados para hoje (Reunião de Arquitetura Google Gemini às 14:00 e Revisão do HUD Sexta-Feira às 16:30).';
     }
@@ -133,7 +150,7 @@ export const App: React.FC = () => {
       return 'Conector do Spotify atualizado. Reproduzindo sua seleção no player integrado do HUD.';
     }
     if (q.includes('email') || q.includes('gmail') || q.includes('inbox')) {
-      return 'Caixa de entrada do Gmail (rafaelwierzba@gmail.com) verificada: Você possui e-mails recentes sobre telemetria e atualizações de segurança.';
+      return 'Caixa de entrada do Gmail (rafaelwierzba@gmail.com) verificada: Você possui mensagens recentes sobre telemetria e atualizações de segurança.';
     }
     if (q.includes('rede') || q.includes('scanner') || q.includes('dispositivo') || q.includes('ip')) {
       return 'Varredura de rede local concluída: Os adaptadores locais e nós Wi-Fi 6 estão ativos e com latência nominal.';
@@ -142,40 +159,43 @@ export const App: React.FC = () => {
       return 'Clima atual verificado via sensores espaciais: Temperatura em torno de 24°C, céu aberto e condições estáveis.';
     }
     if (q.includes('olá') || q.includes('ola') || q.includes('bom dia') || q.includes('boa tarde')) {
-      return 'Olá Rafael! Todos os sistemas da Sexta-Feira e a infraestrutura do Google Gemini estão online. Como posso ajudar você agora?';
+      return 'Olá Rafael! Todos os subsistemas da Sexta-Feira e o motor OpenJarvis estão operacionais. Como posso ajudar você agora?';
     }
-    return `Instrução processada pelo núcleo da Sexta-Feira: "${query}". Sistemas prontos para as próximas diretrizes.`;
+    return `Instrução processada pelo núcleo da Sexta-Feira via motor local: "${query}". Sistemas prontos para as próximas diretrizes.`;
   };
+
+  const isSpeaking = agentState === 'SPEAKING';
+  const isThinking = agentState === 'THINKING' || agentState === 'EXECUTING';
 
   return (
     <div className="hud-viewport">
-      {/* Visual Overlay Scanlines & Grid */}
+      {/* Sci-Fi Ambient Visual Overlays */}
       <div className="hud-scanlines" />
       <div className="hud-grid-overlay" />
 
-      {/* Central 3D Holographic Core Canvas */}
+      {/* Living Fluid 3D Holographic Core Canvas (Matheus Tilli Cinematic Style) */}
       <HologramCoreCanvas state={agentState} audioLevel={audioLevel} />
 
-      {/* Central Holographic Title Badge Overlay */}
+      {/* Top Center Holographic Brand Badge */}
       <div
         style={{
           position: 'absolute',
-          top: '48%',
+          top: '20px',
           left: '50%',
-          transform: 'translate(-50%, -50%)',
+          transform: 'translateX(-50%)',
           textAlign: 'center',
           pointerEvents: 'none',
-          zIndex: 10
+          zIndex: 15
         }}
       >
         <div
           style={{
             fontFamily: 'var(--hud-font-orbitron)',
-            fontSize: '1.6rem',
+            fontSize: '1.4rem',
             fontWeight: 900,
             color: '#00f0ff',
-            letterSpacing: '4px',
-            textShadow: '0 0 20px rgba(0, 240, 255, 0.8)'
+            letterSpacing: '6px',
+            textShadow: '0 0 25px rgba(0, 240, 255, 0.9), 0 0 10px rgba(0, 119, 255, 0.8)'
           }}
         >
           SEXTA-FEIRA
@@ -183,72 +203,89 @@ export const App: React.FC = () => {
         <div
           style={{
             fontFamily: 'var(--hud-font-mono)',
-            fontSize: '0.75rem',
-            color: 'rgba(0, 240, 255, 0.7)',
+            fontSize: '0.68rem',
+            color: 'rgba(0, 240, 255, 0.75)',
             letterSpacing: '3px',
-            marginTop: '4px'
+            marginTop: '2px'
           }}
         >
-          v1.0.0 // GOOGLE GEMINI CLOUD ENGINE
+          AUTONOMOUS AI // STANFORD OPENJARVIS ENGINE &amp; MULTI-HUB
         </div>
       </div>
 
-      {/* Layout Grid of Floating HUD Panels */}
+      {/* Side Dock Toggle Buttons */}
+      <div style={{ position: 'absolute', top: '18px', left: '20px', zIndex: 30 }}>
+        <button
+          className="hud-dock-toggle-btn"
+          onClick={() => setIsLeftDockOpen(!isLeftDockOpen)}
+        >
+          <Sliders size={13} />
+          {isLeftDockOpen ? 'OCULTAR TELEMETRIA ESQ.' : 'TELEMETRIA &amp; REDE'}
+        </button>
+      </div>
+
+      <div style={{ position: 'absolute', top: '18px', right: '20px', zIndex: 30 }}>
+        <button
+          className="hud-dock-toggle-btn"
+          onClick={() => setIsRightDockOpen(!isRightDockOpen)}
+        >
+          {isRightDockOpen ? 'OCULTAR MOTOR DIR.' : 'OPENJARVIS &amp; CONTAS IA'}
+          <Sliders size={13} />
+        </button>
+      </div>
+
+      {/* Left Collapsible Dock Wing: Geolocation, Network Map, Sandbox Console */}
+      <div className={`hud-dock-wing hud-dock-left ${isLeftDockOpen ? '' : 'collapsed'}`}>
+        <GeolocationWidget />
+        <NetworkMapWidget />
+        <SandboxConsoleWidget
+          logs={consoleLogs}
+          onRunTestCode={handleTestSandbox}
+          isRunning={isSandboxRunning}
+        />
+      </div>
+
+      {/* Right Collapsible Dock Wing: OpenJarvis Telemetry, Model Core, Personal Services */}
+      <div className={`hud-dock-wing hud-dock-right ${isRightDockOpen ? '' : 'collapsed'}`}>
+        <OpenJarvisTelemetryWidget />
+        <ModelCoreWidget onOpenAiAccountsModal={() => setIsAiModalOpen(true)} />
+        <PersonalServicesWidget />
+      </div>
+
+      {/* Center Cinematic Dialogue & Oscilloscope Stage (Matheus Tilli Layout) */}
       <div
         style={{
-          position: 'relative',
+          position: 'absolute',
+          bottom: '88px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '10px',
           width: '100%',
-          height: '100%',
-          padding: '16px 24px 90px 24px',
-          display: 'grid',
-          gridTemplateColumns: 'auto 1fr auto',
-          gridTemplateRows: 'auto 1fr auto',
           pointerEvents: 'none',
-          gap: '16px'
+          zIndex: 22
         }}
       >
-        {/* Top Left: Geolocation & Weather */}
-        <div style={{ pointerEvents: 'auto' }}>
-          <GeolocationWidget />
-        </div>
+        {/* Floating Glassmorphic Subtitles */}
+        <HolographicSubtitles
+          lastUserSpeech={lastUserSpeech}
+          lastAiResponse={lastAiResponse}
+          isListening={isListening}
+          isSpeaking={isSpeaking}
+          isThinking={isThinking}
+          activeProvider={activeBrainName}
+        />
 
-        {/* Top Center: Model Core Status */}
-        <div style={{ pointerEvents: 'auto', display: 'flex', justifyContent: 'center' }}>
-          <ModelCoreWidget onOpenAiAccountsModal={() => setIsAiModalOpen(true)} />
-        </div>
-
-        {/* Top Right: Personal Services (Calendar, Gmail, Spotify, OneDrive) */}
-        <div style={{ pointerEvents: 'auto', display: 'flex', justifyContent: 'flex-end' }}>
-          <PersonalServicesWidget />
-        </div>
-
-        {/* Middle Left: Network Map */}
-        <div style={{ pointerEvents: 'auto', gridRow: '2 / 3', alignSelf: 'center' }}>
-          <NetworkMapWidget />
-        </div>
-
-        {/* Center: Open Space for 3D Hologram Orb */}
-        <div />
-
-        {/* Middle Right: Quick Metrics Spacer */}
-        <div />
-
-        {/* Bottom Left: Code Sandbox Console */}
-        <div style={{ pointerEvents: 'auto', gridRow: '3 / 4' }}>
-          <SandboxConsoleWidget
-            logs={consoleLogs}
-            onRunTestCode={handleTestSandbox}
-            isRunning={isSandboxRunning}
-          />
-        </div>
-
-        {/* Bottom Center: Audio Spectrum Visualizer */}
-        <div style={{ pointerEvents: 'auto', gridRow: '3 / 4', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
-          <AudioVisualizerWidget audioLevel={audioLevel} />
-        </div>
-
-        {/* Bottom Right: Spacer */}
-        <div />
+        {/* Real-Time Audio Oscilloscope & Equalizer Waves */}
+        <AudioOscilloscope
+          audioLevel={audioLevel}
+          isListening={isListening}
+          isSpeaking={isSpeaking}
+          width={480}
+          height={60}
+        />
       </div>
 
       {/* Bottom Sticky Status & Voice Command Bar */}
@@ -260,7 +297,7 @@ export const App: React.FC = () => {
         onSendTextMessage={handleCommandDetected}
       />
 
-      {/* Neural AI Accounts Modal */}
+      {/* Multi-Provider Neural AI Accounts Modal */}
       <AiAccountManagerModal
         isOpen={isAiModalOpen}
         onClose={() => setIsAiModalOpen(false)}

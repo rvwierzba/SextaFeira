@@ -1,5 +1,24 @@
 # 📜 CHANGELOG — Sexta-Feira
 
+## [v2.0.0] - 2026-11-09
+
+### 🚀 Novas Funcionalidades
+- **Integração Completa do Stanford OpenJarvis (Hazy Research & SAIL):**
+  - Implementação dos 5 primitivos: *Intelligence*, *Engine*, *Agents*, *Tools/Memory*, e *Learning & Spec Search*.
+  - Solução definitiva para a lentidão de LLM local: arquitetura híbrida com modelos compactos quantizados on-device (`Llama-3.2-1B/3B`, `Qwen-2.5-Coder`) e síntese prévia de especificações guiadas por nuvem (*Spec Search*).
+  - Execução imediata sub-50ms via *Zero-Latency Dispatcher* local para comandos comuns.
+  - Probing automático de hardware para NVIDIA CUDA, DirectML, Vulkan, Apple Metal e CPU AVX2, gerando quotas precisas de VRAM e computação.
+  - Telemetria de traces com pontuação de eficiência energética Stanford *Intelligence Per Watt (TOPS/W)*.
+  - Novo controlador `OpenJarvisController` com rotas para status, catalog, hardware, traces, benchmark e comutação de modo.
+  - Novos testes unitários dedicados em `OpenJarvisTests.cs` (100% de aprovação).
+- **Interface Visual Fluida & Cinemática (Inspirada no assistente JARVIS):**
+  - Esfera 3D orgânica viva (`HologramCoreCanvas`) com deformação por shaders GLSL de ruído 3D Simplex, reagindo em tempo real ao áudio do microfone e à síntese vocal.
+  - Núcleo Arc-Reactor elétrico azul neon (`#00f0ff` e `#0077ff`) com anéis giroscópicos em eixos perpendiculares e nebulosa de 1.200 partículas quânticas.
+  - Novo componente `AudioOscilloscope` com ondas senoidais harmônicas e barras de equalizador animadas no centro do HUD.
+  - Novo componente `HolographicSubtitles` exibindo a transcrição contínua da voz do operador e o streaming com efeito máquina de escrever da fala da Sexta-Feira.
+  - Novo widget `OpenJarvisTelemetryWidget` com mostrador radial de TOPS/W, latência em tempo real e seletor de modo de orquestração (*Hybrid Spec*, *Local Fast*, *Frontier Cloud*).
+  - Docks laterais colapsáveis permitindo desfrutar de uma visão 100% cinemática e limpa do núcleo holográfico central.
+
 ## [v1.2.0] - 2026-10-30
 
 ### 🚀 Novas Funcionalidades

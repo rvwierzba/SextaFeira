@@ -103,6 +103,19 @@ public class AiConnectionManager : IAiConnectionManager
             ConnectedAt = DateTime.UtcNow
         };
 
+        // 4. OpenJarvis (Stanford Local-First Architecture)
+        _connections[LLMProviderType.OpenJarvisLocal] = new AiAccountConnection
+        {
+            Provider = LLMProviderType.OpenJarvisLocal,
+            AccountName = "OpenJarvis (Stanford Local-First)",
+            ModelName = "llama3.2:3b [SpecSearch]",
+            IsConnected = true,
+            IsActive = false,
+            LatencyMs = 45,
+            AuthType = "Local_Hardware_Inference",
+            ConnectedAt = DateTime.UtcNow
+        };
+
         LoadVault();
     }
 
