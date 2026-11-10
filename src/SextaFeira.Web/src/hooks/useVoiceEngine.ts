@@ -310,10 +310,11 @@ export const useVoiceEngine = ({ onCommandDetected, onStateChange }: UseVoiceEng
           if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
 
           // Se o usuário falou apenas a wake-word ("sexta-feira", "ei sexta"),
-          // dá um tempo maior (2.2s) para ele fazer a pergunta sem cortar no meio!
+          // dá uma janela (2.0s) para ele fazer a pergunta sem cortar. Para comandos normais,
+          // usa 950ms para um diálogo rápido e fluido estilo Jarvis.
           const cleaned = cleanTranscriptCommand(currentSpeech);
           const isJustWakeWord = !cleaned || cleaned === 'sexta-feira' || cleaned === 'sexta feira' || cleaned === 'friday';
-          const waitTime = isJustWakeWord ? 2200 : 1300;
+          const waitTime = isJustWakeWord ? 2000 : 950;
 
           silenceTimerRef.current = setTimeout(() => {
             if (accumulatedTranscriptRef.current.trim().length >= 2 && !isSpeakingRef.current) {
@@ -470,17 +471,17 @@ export const useVoiceEngine = ({ onCommandDetected, onStateChange }: UseVoiceEng
           if (selectedVoice) {
             utterance.voice = selectedVoice;
             console.log('🎙️ [VOICE ENGINE] Voz PT-BR Selecionada:', selectedVoice.name, selectedVoice.lang);
-            // Se for Microsoft Maria, usa pitch mais aveludado e taxa 1.0 para não ficar robótica
+            // Cadência rápida e conversacional estilo Jarvis (1.25x)
             if (selectedVoice.name.toLowerCase().includes('maria')) {
               utterance.pitch = 0.95;
-              utterance.rate = 1.0;
+              utterance.rate = 1.15;
             } else {
               utterance.pitch = 1.0;
-              utterance.rate = 1.05;
+              utterance.rate = 1.25;
             }
           } else {
             utterance.pitch = 1.0;
-            utterance.rate = 1.0;
+            utterance.rate = 1.22;
           }
 
           currentUtteranceRef.current = utterance;
@@ -520,6 +521,9 @@ export const useVoiceEngine = ({ onCommandDetected, onStateChange }: UseVoiceEng
       // Tenta reproduzir primeiramente via stream de áudio de alta fidelidade PT-BR
       const audioUrl = `http://localhost:5000/api/core/tts?text=${encodeURIComponent(cleanText.substring(0, 300))}`;
       const audio = new Audio(audioUrl);
+      // Voz mais rápida, dinâmica e natural (1.25x) com preservação de tom
+      audio.defaultPlaybackRate = 1.25;
+      audio.playbackRate = 1.25;
 
       let browserSynthInvoked = false;
       const triggerFallback = () => {
