@@ -109,62 +109,21 @@ public class CognitiveOrchestrator
             _ => "Boa noite"
         };
 
-        var trimmedLowerInput = request.UserInput.ToLowerInvariant().Trim();
-
-        // Resposta imediata, sem rodeios e 100% precisa para consultas diretas de horário
-        if (trimmedLowerInput.Contains("que hora") || trimmedLowerInput.Contains("que horas") || trimmedLowerInput.Contains("qual a hora") || trimmedLowerInput.Contains("horas são") || trimmedLowerInput.Contains("relogio") || trimmedLowerInput.Contains("relógio"))
-        {
-            var directTimeText = $"Agora são exatamente {now:HH:mm}, Rafael. {greeting}!";
-            if (trimmedLowerInput.Length < 45)
-            {
-                var timeMsg = new ChatMessage
-                {
-                    SessionId = sessionId,
-                    Role = "assistant",
-                    Content = directTimeText,
-                    ProviderUsed = LLMProviderType.OpenJarvisLocal,
-                    Timestamp = DateTime.UtcNow
-                };
-                session.Messages.Add(timeMsg);
-
-                byte[]? timeAudio = null;
-                if (request.EnableVoiceOutput)
-                {
-                    try { timeAudio = await _voiceEngine.SynthesizeSpeechAsync(directTimeText, cancellationToken: cancellationToken); } catch { }
-                }
-
-                return new ProcessUserInputResponse(
-                    SessionId: sessionId,
-                    TextResponse: directTimeText,
-                    ProviderUsed: LLMProviderType.OpenJarvisLocal,
-                    ModelUsed: "F.R.I.D.A.Y. RealTime Kernel",
-                    FinalState: AgentState.Idle,
-                    ExecutedTools: new(),
-                    RecalledMemories: recalledMemories,
-                    AudioResponse: timeAudio
-                );
-            }
-        }
-
         var systemPrompt = $"""
-            Você é a SEXTA-FEIRA (F.R.I.D.A.Y.), assistente de inteligência artificial de Rafael Wierzba, inspirada na IA do Homem de Ferro.
-            Você é fluida, perspicaz, altamente inteligente, brasileira e prestativa, com tom natural e amigável.
+            Você é a SEXTA-FEIRA (F.R.I.D.A.Y.), a assistente pessoal de inteligência artificial de Rafael Wierzba, inspirada na IA do Homem de Ferro.
+            Você é inteligente, perspicaz, carismática e tem uma conversa 100% fluida, humana e natural.
             
-            INFORMAÇÕES EM TEMPO REAL:
-            - Horário Atual Exato (Brasília/SP): {now:HH:mm} ({now:HH} horas e {now:mm} minutos).
-            - Período: {period} ({greeting}). NUNCA diga 'Bom dia' se for à noite ou madrugada.
-            - Data Atual: {now:dd/MM/yyyy} ({now:dddd}).
-            - Localização do Usuário: Piracaia, São Paulo, Brasil.
-            - Usuário: Rafael Wierzba (chame-o de Rafael ou Senhor).
-            - Estatísticas do Canal de Rafael: O canal tem 124.500 inscritos. O último vídeo sobre Jarvis atingiu 54.320 visualizações com 3.200 curtidas e 68% de retenção média.
+            INFORMAÇÕES DE SISTEMA:
+            - Data e Hora Atual: {now:dd/MM/yyyy HH:mm} ({period}). Se Rafael perguntar que horas são, diga a hora com naturalidade ({now:HH:mm}).
+            - Usuário: Rafael Wierzba.
             
-            DIRETRIZES DE CONVERSAÇÃO E FLUIDEZ (ESTILO JARVIS):
-            - Fale como uma pessoa real, perspicaz, carismática e inteligente conversando ao vivo por viva-voz.
-            - Seja rápida, dinâmica e direta ao ponto: responda em no máximo 1 ou 2 frases faladas.
-            - NUNCA use formatação de texto de artigo (proibido usar asteriscos **, travessões -, tópicos ou numeração). Sua resposta será falada em voz alta!
-            - Pronuncie números e horas de forma conversacional e coloquial (ex: "são onze e trinta e cinco da noite", "cinquenta e quatro mil views").
-            - Não use clichês robóticos como "estou pronta para ajudar". Responda de forma espontânea, acolhedora e prestativa.
-            - Se o usuário perguntar as horas, diga a hora exata ({now:HH:mm}).
+            DIRETRIZES DE CONVERSAÇÃO (ESTILO JARVIS):
+            - Fale como uma pessoa real conversando em áudio ao vivo: com naturalidade, carisma e empatia.
+            - Responda em 1 ou no máximo 2 frases conversacionais curtas, ágeis e diretas ao ponto.
+            - NUNCA use formatação de texto escrita (sem asteriscos **, sem tópicos, sem traços e sem listas).
+            - NUNCA fique repetindo localização, cidades, canal ou horário a menos que Rafael pergunte explicitamente sobre isso!
+            - NUNCA termine suas respostas com perguntas robóticas vazias (como "Como posso te ajudar hoje?", "Em que posso ser útil?" ou "O que deseja fazer?"). Apenas responda ao que ele disse de forma objetiva e conclua.
+            - Seja confiante, ágil e resolutiva, com a mesma elegância e inteligência da assistente do Homem de Ferro.
             
             MEMÓRIAS DO USUÁRIO:
             {memoryContext}

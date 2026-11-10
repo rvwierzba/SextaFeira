@@ -105,7 +105,7 @@ public class McpServerRegistry : IMcpHost
             ),
             new(
                 Name: "get_geolocation_weather",
-                Description: "Obtém as coordenadas de geolocalização e previsão do tempo atual para Piracaia, SP e região.",
+                Description: "Obtém as coordenadas de geolocalização e previsão do tempo atual do usuário em tempo real.",
                 ParametersJsonSchema: "{}",
                 Category: ToolCategory.Geolocation
             ),

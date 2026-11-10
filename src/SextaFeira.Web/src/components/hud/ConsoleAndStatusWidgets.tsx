@@ -180,7 +180,7 @@ export const HudStatusBar: React.FC<HudStatusBarProps> = ({
             type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            placeholder="Digite uma diretriz ou comando para a Sexta-Feira (ex: 'Pesquisar restaurantes em Piracaia, SP')..."
+            placeholder="Digite uma diretriz ou comando para a Sexta-Feira..."
             style={{
               flex: 1,
               background: 'rgba(4, 14, 30, 0.8)',

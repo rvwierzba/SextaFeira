@@ -99,7 +99,7 @@ public class OpenJarvisInferenceEngine : IOpenJarvisEngine
         var totalMemMb = Math.Max(8192, totalMemBytes / (1024 * 1024));
         var availableMemMb = (long)(totalMemMb * 0.65);
 
-        string recommendedModel = dedicatedVramMb >= 8000 ? "llama3.2:3b" : "llama3.2:1b";
+        string recommendedModel = dedicatedVramMb >= 8000 ? "llama3.1:8b" : "phi4-mini:latest";
         string recommendedQuant = dedicatedVramMb >= 6000 ? "Q4_K_M" : "Q4_0";
 
         _cachedHardwareQuota = new HardwareQuota(
@@ -326,8 +326,8 @@ public class OpenJarvisInferenceEngine : IOpenJarvisEngine
                 var models = doc.RootElement.GetProperty("models").EnumerateArray()
                     .Select(m => m.GetProperty("name").GetString() ?? "")
                     .ToList();
-                if (models.Any(m => m.Contains("phi4-mini"))) modelToUse = models.First(m => m.Contains("phi4-mini"));
-                else if (models.Any(m => m.Contains("llama3.1"))) modelToUse = models.First(m => m.Contains("llama3.1"));
+                if (models.Any(m => m.Contains("llama3.1"))) modelToUse = models.First(m => m.Contains("llama3.1"));
+                else if (models.Any(m => m.Contains("phi4-mini"))) modelToUse = models.First(m => m.Contains("phi4-mini"));
                 else if (models.Any(m => m.Contains("qwen2.5"))) modelToUse = models.First(m => m.Contains("qwen2.5"));
                 else if (models.Count > 0) modelToUse = models[0];
             }
@@ -345,8 +345,8 @@ public class OpenJarvisInferenceEngine : IOpenJarvisEngine
                 stream = false,
                 options = new
                 {
-                    temperature = 0.6,
-                    num_predict = 110
+                    temperature = 0.7,
+                    num_predict = 100
                 }
             };
 
@@ -399,27 +399,7 @@ public class OpenJarvisInferenceEngine : IOpenJarvisEngine
 
     private static string GenerateConversationalFallback(string prompt)
     {
-        var lower = prompt.ToLowerInvariant();
-        var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, 
-            TimeZoneInfo.CreateCustomTimeZone("BRT", TimeSpan.FromHours(-3), "Brasilia Time", "Brasilia Time"));
-
-        if (lower.Contains("hora") || lower.Contains("relogio") || lower.Contains("relógio"))
-        {
-            return $"Agora são exatamente {now:HH:mm}, Rafael.";
-        }
-        if (lower.Contains("visualiza") || lower.Contains("view") || lower.Contains("views") || lower.Contains("canal") || lower.Contains("youtube") || lower.Contains("video") || lower.Contains("vídeo"))
-        {
-            return "O seu último vídeo no YouTube atingiu 54.320 visualizações, com 3.200 curtidas e uma excelente retenção média de 68%.";
-        }
-        if (lower.Contains("status") || lower.Contains("sistema") || lower.Contains("hardware"))
-        {
-            return "Estou com todos os sistemas online e prontos. Meus módulos de inferência e ferramentas MCP estão operando com eficiência máxima.";
-        }
-        if (lower.Contains("quem é você") || lower.Contains("o que você faz"))
-        {
-            return "Eu sou a Sexta-Feira, sua assistente pessoal de inteligência artificial. Estou aqui pronta para suas diretrizes.";
-        }
-        return $"Entendido, Rafael. Estou processando sua solicitação sobre \"{prompt}\" com eficiência máxima.";
+        return "Tive uma breve oscilação na conexão neural com o modelo local. Pode repetir sua solicitação, Rafael?";
     }
 
     public Task LogTraceAsync(OpenJarvisTrace trace, CancellationToken cancellationToken = default)

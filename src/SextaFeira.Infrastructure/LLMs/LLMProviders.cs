@@ -41,20 +41,15 @@ public class OllamaLocalFallbackProvider : ILLMProvider
                 using var jsonDoc = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
                 if (jsonDoc.RootElement.TryGetProperty("models", out var models) && models.GetArrayLength() > 0)
                 {
-                    foreach (var model in models.EnumerateArray())
-                    {
-                        var name = model.GetProperty("name").GetString();
-                        if (!string.IsNullOrEmpty(name))
-                        {
-                            if (name.Contains("llama3") || name.Contains("qwen") || name.Contains("phi4"))
-                            {
-                                _resolvedModelName = name;
-                                _logger.LogInformation("Modelo Ollama ativo detectado: {ModelName}", _resolvedModelName);
-                                return _resolvedModelName;
-                            }
-                        }
-                    }
-                    _resolvedModelName = models[0].GetProperty("name").GetString() ?? DefaultModelName;
+                    var modelList = models.EnumerateArray().Select(m => m.GetProperty("name").GetString() ?? "").Where(s => !string.IsNullOrEmpty(s)).ToList();
+                    // Prioriza LLaMA 3.1 8B para máxima fluidez e naturalidade humana
+                    if (modelList.Any(m => m.Contains("llama3.1"))) _resolvedModelName = modelList.First(m => m.Contains("llama3.1"));
+                    else if (modelList.Any(m => m.Contains("llama3"))) _resolvedModelName = modelList.First(m => m.Contains("llama3"));
+                    else if (modelList.Any(m => m.Contains("qwen2.5-coder:7b"))) _resolvedModelName = modelList.First(m => m.Contains("qwen2.5-coder:7b"));
+                    else if (modelList.Any(m => m.Contains("phi4"))) _resolvedModelName = modelList.First(m => m.Contains("phi4"));
+                    else _resolvedModelName = modelList[0];
+
+                    _logger.LogInformation("Modelo Ollama ativo selecionado para diálogo: {ModelName}", _resolvedModelName);
                     return _resolvedModelName;
                 }
             }
@@ -153,35 +148,11 @@ public class OllamaLocalFallbackProvider : ILLMProvider
         string directText;
         if (toolCalls.Count > 0)
         {
-            directText = "Acionando barramento de ferramentas MCP para executar sua solicitação...";
-        }
-        else if (lower.Contains("hora") || lower.Contains("ora") || lower.Contains("relogio") || lower.Contains("relógio"))
-        {
-            directText = $"Agora são exatamente {DateTime.Now:HH} horas e {DateTime.Now:mm} minutos.";
-        }
-        else if (lower.Contains("visualiza") || lower.Contains("view") || lower.Contains("views") || lower.Contains("canal") || lower.Contains("youtube") || lower.Contains("video") || lower.Contains("vídeo"))
-        {
-            directText = "O seu último vídeo no YouTube atingiu 54.320 visualizações, com mais de 3.200 curtidas e uma excelente retenção média de 68%.";
-        }
-        else if (lower.Contains("olá") || lower.Contains("ola") || lower.Contains("bom dia") || lower.Contains("boa tarde") || lower.Contains("boa noite") || lower.Contains("sexta feira") || lower.Contains("sexta-feira"))
-        {
-            directText = "Olá! Estou com todos os sistemas online e prontos, como posso te ajudar? Posso consultar sua agenda do Google, verificar e-mails, analisar sua rede local, consultar o clima ou reproduzir músicas no Spotify.";
-        }
-        else if (lower.Contains("status") || lower.Contains("sistema") || lower.Contains("core"))
-        {
-            directText = "Estou com todos os sistemas online e prontos. Meus módulos de inferência, barramento MCP e conexões neurais estão operando com 100% de capacidade. Como posso te ajudar?";
-        }
-        else if (lower.Contains("quem é você") || lower.Contains("quem e voce") || lower.Contains("o que você faz") || lower.Contains("o que voce faz"))
-        {
-            directText = "Eu sou a Sexta-Feira, sua assistente pessoal de inteligência artificial. Gerencio sua agenda, e-mails, dispositivos de rede, automações e tudo o que você precisar. Como posso te ajudar agora?";
-        }
-        else if (lower.Contains("clima") || lower.Contains("tempo") || lower.Contains("temperatura") || lower.Contains("chover") || lower.Contains("chuva"))
-        {
-            directText = "O clima na sua região está marcando 24°C, céu aberto e condições meteorológicas estáveis.";
+            directText = "Acionando as ferramentas necessárias para executar sua solicitação.";
         }
         else
         {
-            directText = $"Analisei sua solicitação sobre {request.Prompt}. Todos os parâmetros foram validados e já estou executando as ações correspondentes.";
+            directText = "Desculpe, Rafael. Ocorreu uma interrupção na comunicação com o modelo neural local no Ollama. Verifique se o serviço está ativo.";
         }
 
         return new LLMResponse(

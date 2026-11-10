@@ -15,7 +15,7 @@ public class AiConnectionManager : IAiConnectionManager
     private readonly ILogger<AiConnectionManager> _logger;
     private readonly ConcurrentDictionary<LLMProviderType, AiAccountConnection> _connections = new();
     private readonly ConcurrentDictionary<LLMProviderType, string> _credentials = new();
-    private LLMProviderType _activeProvider = LLMProviderType.GoogleGemini;
+    private LLMProviderType _activeProvider = LLMProviderType.OpenJarvisLocal;
     private readonly string _vaultFilePath;
     private readonly SemaphoreSlim _lock = new(1, 1);
 
@@ -47,10 +47,10 @@ public class AiConnectionManager : IAiConnectionManager
         _connections[LLMProviderType.GoogleGemini] = new AiAccountConnection
         {
             Provider = LLMProviderType.GoogleGemini,
-            AccountName = "rafaelwierzba@gmail.com",
+            AccountName = geminiConnected ? "rafaelwierzba@gmail.com" : "Google Gemini Cloud",
             ModelName = "gemini-2.0-flash",
             IsConnected = geminiConnected,
-            IsActive = true,
+            IsActive = geminiConnected,
             LatencyMs = 120,
             AuthType = "Google_OAuth",
             ConnectedAt = DateTime.UtcNow
@@ -108,9 +108,9 @@ public class AiConnectionManager : IAiConnectionManager
         {
             Provider = LLMProviderType.OpenJarvisLocal,
             AccountName = "OpenJarvis (Stanford Local-First)",
-            ModelName = "llama3.2:3b [SpecSearch]",
+            ModelName = "llama3.1:8b [SpecSearch]",
             IsConnected = true,
-            IsActive = false,
+            IsActive = !geminiConnected && !openAiConnected && !anthropicConnected,
             LatencyMs = 45,
             AuthType = "Local_Hardware_Inference",
             ConnectedAt = DateTime.UtcNow

@@ -23,76 +23,24 @@ export const App: React.FC = () => {
 
   const [consoleLogs, setConsoleLogs] = useState<string[]>([
     '[INIT] Sexta-Feira AI Core v2.0 inicializado com sucesso.',
-    '[STANFORD] OpenJarvis Local Inference Engine ativo (<50ms zero-latency dispatch).',
+    '[LLM] Conectado ao modelo de inferência neural on-device.',
     '[HARDWARE] Quota de aceleração detectada: NVIDIA CUDA / AVX2.',
     '[VOICE] Reconhecimento contínuo de fala ativado em Português do Brasil.',
-    '[MCP] 8 ferramentas ativas (Google Calendar, Gmail, Network, Spotify, Stealth).'
+    '[MCP] Ferramentas ativas e integradas ao agente.'
   ]);
   const [isSandboxRunning, setIsSandboxRunning] = useState(false);
 
-  const generateLocalResponse = (query: string): string => {
-    const q = query.toLowerCase().trim();
-
-    if (!q || q === 'sexta feira' || q === 'sexta-feira' || q === 'friday' || q === 'ei sexta') {
-      return 'Estou aqui, com todos os sistemas online e prontos. Como posso te ajudar?';
-    }
-    if (q.includes('hora') || q.includes('ora') || q.includes('relogio') || q.includes('relógio') || q.includes('data')) {
-      const now = new Date();
-      return `Agora são exatamente ${now.getHours()} horas e ${now.getMinutes()} minutos.`;
-    }
-    if (q.includes('visualiza') || q.includes('view') || q.includes('views') || q.includes('canal') || q.includes('youtube') || q.includes('video') || q.includes('vídeo')) {
-      return 'O seu último vídeo no YouTube atingiu 54.320 visualizações, com 3.200 curtidas e uma excelente retenção média de 68%.';
-    }
-    if (q.includes('olá') || q.includes('ola') || q.includes('oi') || q.includes('bom dia') || q.includes('boa tarde') || q.includes('boa noite')) {
-      return 'Olá! Estou com todos os sistemas online e prontos, como posso te ajudar?';
-    }
-    if (q.includes('como você está') || q.includes('tudo bem') || q.includes('tudo bom')) {
-      return 'Estou ótima e com todos os meus módulos prontos e operando com 100% de capacidade. Como posso te ajudar agora?';
-    }
-    if (q.includes('quem é você') || q.includes('quem e voce') || q.includes('o que você faz') || q.includes('o que você é')) {
-      return 'Eu sou a Sexta-Feira, sua assistente pessoal de inteligência artificial. Gerencio seus sistemas, agenda, rede, automações e tudo o que você precisar.';
-    }
-    if (q.includes('status') || q.includes('sistema') || q.includes('hardware') || q.includes('openjarvis') || q.includes('diagnostico') || q.includes('diagnóstico')) {
-      return 'Estou com todos os sistemas online e prontos. Meus módulos de inferência, aceleradores e ferramentas MCP estão operando com eficiência máxima.';
-    }
-    if (q.includes('agenda') || q.includes('compromisso') || q.includes('calendário') || q.includes('reunião')) {
-      return 'Consultei sua agenda no Google Calendar: você possui 2 eventos confirmados para hoje.';
-    }
-    if (q.includes('spotify') || q.includes('música') || q.includes('tocar') || q.includes('play')) {
-      return 'Player do Spotify conectado. Reproduzindo sua playlist agora.';
-    }
-    if (q.includes('email') || q.includes('gmail') || q.includes('inbox') || q.includes('mensagem')) {
-      return 'Verifiquei sua caixa de entrada no Gmail: você possui novas mensagens recentes.';
-    }
-    if (q.includes('rede') || q.includes('scanner') || q.includes('dispositivo') || q.includes('ip') || q.includes('wifi')) {
-      return 'Varredura da sua rede local concluída: todos os adaptadores e nós locais estão com latência nominal.';
-    }
-    if (q.includes('clima') || q.includes('tempo') || q.includes('temperatura') || q.includes('chover')) {
-      return 'Verifiquei o clima para você: temperatura em torno de 24°C, céu limpo e condições estáveis.';
-    }
-    return `Analisei sua solicitação sobre "${query}". Já estou processando e executando as ações correspondentes.`;
-  };
-
   const handleCommandDetected = async (command: string) => {
-    setLastUserSpeech(command);
-    setAgentState('THINKING');
-    setStatusMessage(`Sexta-Feira analisando: "${command}"...`);
-    addConsoleLog(`[OPERADOR] "${command}"`);
+    const cleanCmd = command.trim();
+    if (!cleanCmd) return;
 
-    const q = command.toLowerCase().trim();
-    // Apenas saudação vazia ou toque puro no mic responde instantaneamente
-    if (!q || q === 'sexta feira' || q === 'sexta-feira' || q === 'friday' || q === 'ei sexta') {
-      const wakeResponse = 'Estou aqui, com todos os sistemas online e prontos. Como posso te ajudar?';
-      setLastAiResponse(wakeResponse);
-      addConsoleLog(`[SEXTA-FEIRA] ${wakeResponse}`);
-      setStatusMessage(`Respondendo: ${wakeResponse}`);
-      speakResponse(wakeResponse);
-      return;
-    }
+    setLastUserSpeech(cleanCmd);
+    setAgentState('THINKING');
+    setStatusMessage(`Sexta-Feira processando: "${cleanCmd}"...`);
+    addConsoleLog(`[OPERADOR] "${cleanCmd}"`);
 
     try {
       const controller = new AbortController();
-      // Timeout ampliado para 15 segundos para dar tempo ao modelo de inferência responder com profundidade e fluidez
       const timeoutId = setTimeout(() => controller.abort(), 15000);
 
       let textResponse = '';
@@ -101,8 +49,8 @@ export const App: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userInput: command,
-          enableVoiceOutput: true
+          userInput: cleanCmd,
+          enableVoiceOutput: false
         }),
         signal: controller.signal
       }).catch(() => null);
@@ -111,21 +59,21 @@ export const App: React.FC = () => {
 
       if (response && response.ok) {
         const data = await response.json();
-        textResponse = data.textResponse || generateLocalResponse(command);
+        textResponse = data.textResponse || 'Pronta, Rafael.';
       } else {
-        textResponse = generateLocalResponse(command);
+        textResponse = 'Desculpe, tive uma instabilidade de conexão com o modelo de inteligência artificial.';
       }
 
       setLastAiResponse(textResponse);
       addConsoleLog(`[SEXTA-FEIRA] ${textResponse}`);
-      setStatusMessage(`Respondendo: ${textResponse.substring(0, 60)}...`);
+      setStatusMessage(`Sexta-Feira: ${textResponse.substring(0, 50)}...`);
       speakResponse(textResponse);
     } catch (err) {
-      console.warn('Erro ao processar comando, acionando resposta cognitiva:', err);
-      const fallbackMsg = generateLocalResponse(command);
-      setLastAiResponse(fallbackMsg);
-      addConsoleLog(`[SEXTA-FEIRA] ${fallbackMsg}`);
-      speakResponse(fallbackMsg);
+      console.warn('Erro ao processar comando:', err);
+      const errResponse = 'Desculpe, tive uma instabilidade de conexão com o modelo de inteligência artificial.';
+      setLastAiResponse(errResponse);
+      addConsoleLog(`[SEXTA-FEIRA] ${errResponse}`);
+      speakResponse(errResponse);
     }
   };
 

@@ -74,10 +74,9 @@ public class PgVectorMemoryStore : IMemoryStore
     // Em-memory fallback se PostgreSQL não estiver conectado no instante
     private static readonly List<MemoryVector> _inMemoryCache = new()
     {
-        new MemoryVector { Category = "Perfil", Content = "O usuário é um Arquiteto de Software e Engenheiro de IA.", ImportanceScore = 1.0 },
-        new MemoryVector { Category = "Preferência", Content = "O usuário prefere respostas em PT-BR objetivas e em alto nível técnico.", ImportanceScore = 1.0 },
-        new MemoryVector { Category = "Ambiente", Content = "Sistema operacional principal Windows, ambiente de execução Docker ativo.", ImportanceScore = 0.9 },
-        new MemoryVector { Category = "Localização", Content = "Localização base em Piracaia, São Paulo, Brasil.", ImportanceScore = 0.8 }
+        new MemoryVector { Category = "Perfil", Content = "O usuário é Rafael Wierzba, Arquiteto de Software e Engenheiro de IA.", ImportanceScore = 1.0 },
+        new MemoryVector { Category = "Preferência", Content = "O usuário prefere respostas diretas, inteligentes e conversacionais em PT-BR.", ImportanceScore = 1.0 },
+        new MemoryVector { Category = "Ambiente", Content = "Sistema operacional Windows, ambiente de execução Docker ativo.", ImportanceScore = 0.9 }
     };
 
     public PgVectorMemoryStore(AppDbContext dbContext, IEnumerable<ILLMProvider> llmProviders)

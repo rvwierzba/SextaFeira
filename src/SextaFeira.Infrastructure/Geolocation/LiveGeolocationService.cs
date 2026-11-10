@@ -51,7 +51,7 @@ public class LiveGeolocationService : IGeolocationService
                 var loc = new LiveGeoLocation(
                     Latitude: lat,
                     Longitude: lon,
-                    City: city ?? "Piracaia",
+                    City: city ?? "Localização Atual",
                     Region: state ?? "SP",
                     Country: country ?? "Brasil",
                     FormattedAddress: displayName,
@@ -101,12 +101,12 @@ public class LiveGeolocationService : IGeolocationService
 
         // 3. Fallback de contingência
         return _lastKnownLocation ?? new LiveGeoLocation(
-            Latitude: -23.0544,
-            Longitude: -46.3589,
-            City: "Piracaia",
+            Latitude: -23.5505,
+            Longitude: -46.6333,
+            City: "São Paulo",
             Region: "São Paulo",
             Country: "Brasil",
-            FormattedAddress: "Piracaia, São Paulo, Brasil",
+            FormattedAddress: "São Paulo, SP, Brasil",
             Source: "Sexta-Feira Spatial Base"
         );
     }

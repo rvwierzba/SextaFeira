@@ -41,7 +41,7 @@ export const ModelCoreWidget: React.FC<ModelCoreWidgetProps> = ({ onOpenAiAccoun
           });
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [keySaved]);
 
   const handleSaveKey = async (e: React.FormEvent) => {
@@ -201,13 +201,13 @@ export const GeolocationWidget: React.FC = () => {
     city: 'Detectando...',
     region: 'SP',
     country: 'Brasil',
-    latitude: -23.0544,
-    longitude: -46.3589,
-    formattedAddress: 'Piracaia, SP',
+    latitude: -23.5505,
+    longitude: -46.6333,
+    formattedAddress: 'Localização do Operador',
     weather: {
       temp: 24,
-      condition: 'Sunny',
-      humidity: 58
+      condition: 'Clear',
+      humidity: 50
     }
   });
 

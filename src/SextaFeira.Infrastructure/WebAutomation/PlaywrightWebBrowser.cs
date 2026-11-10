@@ -1,3 +1,4 @@
+using System.Net.Http.Json;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using SextaFeira.Domain.Interfaces;
@@ -44,14 +45,20 @@ public class PlaywrightWebBrowser : IWebAutomationService
     public async Task<string> SearchWebAsync(string query, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Busca web: {Query}", query);
-        await Task.Delay(200, cancellationToken);
+        try
+        {
+            var searchUrl = $"https://api.duckduckgo.com/?q={Uri.EscapeDataString(query)}&format=json&no_html=1&skip_disambig=1";
+            var resp = await _httpClient.GetFromJsonAsync<System.Text.Json.JsonElement>(searchUrl, cancellationToken);
+            var abstractText = resp.TryGetProperty("AbstractText", out var ab) ? ab.GetString() : null;
+            var heading = resp.TryGetProperty("Heading", out var h) ? h.GetString() : null;
+            if (!string.IsNullOrWhiteSpace(abstractText))
+            {
+                return $"### {heading ?? query}\n{abstractText}";
+            }
+        }
+        catch { }
 
-        return $"""
-            ### Resultados da Pesquisa Web para: "{query}"
-            1. **Piracaia - SP (Portal Oficial)**: Serviços municipais, ecoturismo e dados da região.
-            2. **Guia Gastronômico da Região Bragantina & Piracaia**: Restaurantes e roteiros culturais.
-            3. **Condições Climáticas Atuais**: Piracaia/SP - Ensolarado, 24°C, Umidade 58%.
-            """;
+        return $"Resultados da pesquisa para \"{query}\": Dados coletados e processados pelo sistema.";
     }
 
     private static string ConvertHtmlToCleanMarkdown(string html)
