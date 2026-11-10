@@ -21,7 +21,7 @@ services:
     image: ollama/ollama:latest
     container_name: sextafeira-ollama
     ports:
-      - "11434:11434"
+      - "${OLLAMA_PORT:-11435}:11434"
     volumes:
       - ollama_data:/root/.ollama
     restart: unless-stopped
@@ -34,7 +34,9 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__PostgresVector=Host=postgres-vector;Port=5432;Database=sextafeira_db;Username=postgres;Password=postgres
-      - Ollama__BaseUrl=http://ollama-local:11434
+      - Ollama__BaseUrl=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "5000:5000"
     depends_on:
