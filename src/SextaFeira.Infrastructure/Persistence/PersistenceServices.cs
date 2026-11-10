@@ -121,33 +121,35 @@ public class PgVectorMemoryStore : IMemoryStore
 
     public async Task<List<MemoryVector>> SearchSimilarAsync(string query, int limit = 5, double minSimilarity = 0.6, CancellationToken cancellationToken = default)
     {
-        var queryEmbedding = await _embeddingProvider.GenerateEmbeddingAsync(query, cancellationToken);
-        var queryVector = new Vector(queryEmbedding);
-
         try
         {
-            var records = await _dbContext.Memories
-                .Where(m => !m.IsRecycled)
-                .OrderBy(m => m.Embedding!.CosineDistance(queryVector))
-                .Take(limit)
-                .ToListAsync(cancellationToken);
-
-            if (records.Count > 0)
+            var queryEmbedding = await _embeddingProvider.GenerateEmbeddingAsync(query, cancellationToken);
+            if (queryEmbedding != null && queryEmbedding.Length > 0)
             {
-                return records.Select(r => new MemoryVector
+                var queryVector = new Vector(queryEmbedding);
+                var records = await _dbContext.Memories
+                    .Where(m => !m.IsRecycled)
+                    .OrderBy(m => m.Embedding!.CosineDistance(queryVector))
+                    .Take(limit)
+                    .ToListAsync(cancellationToken);
+
+                if (records.Count > 0)
                 {
-                    Id = r.Id,
-                    Content = r.Content,
-                    Category = r.Category,
-                    ImportanceScore = r.ImportanceScore,
-                    CreatedAt = r.CreatedAt,
-                    LastAccessedAt = r.LastAccessedAt
-                }).ToList();
+                    return records.Select(r => new MemoryVector
+                    {
+                        Id = r.Id,
+                        Content = r.Content,
+                        Category = r.Category,
+                        ImportanceScore = r.ImportanceScore,
+                        CreatedAt = r.CreatedAt,
+                        LastAccessedAt = r.LastAccessedAt
+                    }).ToList();
+                }
             }
         }
         catch
         {
-            // Fallback in-memory
+            // Fallback in-memory seguro e instantâneo
         }
 
         lock (_inMemoryCache)
